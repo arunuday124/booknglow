@@ -140,7 +140,7 @@ class Login extends StatelessWidget {
                           ),
                         ),
                         decoration: InputDecoration(
-                          hintText: "e.g. elegance@lifestyle.com",
+                          hintText: "e.g. example@gmail.com",
                           hintStyle: GoogleFonts.plusJakartaSans(
                             textStyle: TextStyle(
                               color: Colors.grey.shade400,
@@ -167,36 +167,17 @@ class Login extends StatelessWidget {
                       ),
 
                       const SizedBox(height: 28),
-
-                      // Password Field Header Row (Label + Forgot Password)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "PASSWORD",
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4C6B64),
-                                letterSpacing: 0.8,
-                              ),
-                            ),
+                      // Password Field Header Row
+                      Text(
+                        "PASSWORD",
+                        style: GoogleFonts.plusJakartaSans(
+                          textStyle: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4C6B64),
+                            letterSpacing: 0.8,
                           ),
-                          GestureDetector(
-                            onTap: controller.forgotPassword,
-                            child: Text(
-                              "Forgot Password?",
-                              style: GoogleFonts.plusJakartaSans(
-                                textStyle: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF9E7E45), // Warm luxury gold
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 4),
 
@@ -249,8 +230,25 @@ class Login extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 8),
 
-                      const SizedBox(height: 36),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: controller.forgotPassword,
+                          child: Text(
+                            "Forgot Password?",
+                            style: GoogleFonts.plusJakartaSans(
+                              textStyle: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9E7E45), // Warm luxury gold
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
 
                       // Sign In Button
                       SizedBox(
@@ -343,24 +341,37 @@ class Login extends StatelessWidget {
                         children: [
                           // Google login button
                           Expanded(
-                            child: InkWell(
-                              onTap: controller.loginWithGoogle,
-                              borderRadius: BorderRadius.circular(8.0),
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                    width: 1.2,
+                            child: Obx(
+                              () => InkWell(
+                                onTap: controller.isGoogleLoading.value
+                                    ? null
+                                    : controller.loginWithGoogle,
+                                borderRadius: BorderRadius.circular(8.0),
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 1.2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8.0),
                                   ),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                alignment: Alignment.center,
-                                child: Image.asset(
-                                  "assets/images/google.png",
-                                  height: 22,
-                                  width: 22,
-                                  fit: BoxFit.contain,
+                                  alignment: Alignment.center,
+                                  child: controller.isGoogleLoading.value
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF05352F),
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Image.asset(
+                                          "assets/images/google.png",
+                                          height: 22,
+                                          width: 22,
+                                          fit: BoxFit.contain,
+                                        ),
                                 ),
                               ),
                             ),

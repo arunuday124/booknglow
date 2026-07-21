@@ -1,13 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
+import 'personal_info.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? "victoria.sterling@elegance.com";
+
+    String displayName = "Victoria Sterling";
+    if (user != null) {
+      if (user.displayName != null && user.displayName!.isNotEmpty) {
+        displayName = user.displayName!;
+      } else if (user.email != null) {
+        final parts = user.email!.split('@');
+        if (parts.isNotEmpty) {
+          final rawName = parts[0];
+          displayName =
+              rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
+        }
+      }
+    }
+
+    String initials = "VS";
+    if (displayName.isNotEmpty) {
+      final names = displayName.trim().split(RegExp(r'\s+'));
+      if (names.length >= 2) {
+        initials =
+            (names[0].isNotEmpty ? names[0][0] : '') +
+            (names[1].isNotEmpty ? names[1][0] : '');
+        initials = initials.toUpperCase();
+      } else if (names.isNotEmpty && names[0].isNotEmpty) {
+        initials = names[0][0].toUpperCase();
+        if (names[0].length > 1) {
+          initials += names[0][1].toUpperCase();
+        }
+      }
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F5),
       appBar: AppBar(
@@ -58,10 +92,7 @@ class ProfileScreen extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFE8D5AF),
-                            Color(0xFF9E7E45),
-                          ],
+                          colors: [Color(0xFFE8D5AF), Color(0xFF9E7E45)],
                         ),
                       ),
                       child: CircleAvatar(
@@ -71,7 +102,7 @@ class ProfileScreen extends StatelessWidget {
                           radius: 43,
                           backgroundColor: const Color(0xFF05352F),
                           child: Text(
-                            "VS",
+                            initials,
                             style: GoogleFonts.playfairDisplay(
                               textStyle: const TextStyle(
                                 fontSize: 28,
@@ -87,7 +118,7 @@ class ProfileScreen extends StatelessWidget {
 
                     // User details
                     Text(
-                      "Victoria Sterling",
+                      displayName,
                       style: GoogleFonts.playfairDisplay(
                         textStyle: const TextStyle(
                           fontSize: 20,
@@ -98,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "victoria.sterling@elegance.com",
+                      email,
                       style: GoogleFonts.plusJakartaSans(
                         textStyle: const TextStyle(
                           fontSize: 13,
@@ -185,7 +216,11 @@ class ProfileScreen extends StatelessWidget {
                     _buildOption(
                       icon: Icons.person_outline,
                       title: "Personal Information",
-                      onTap: () {},
+                      onTap: () => Get.to(
+                        () => const PersonalInfoScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                     const Divider(height: 1, color: Color(0xFFFAF9F5)),
                     _buildOption(
@@ -221,19 +256,30 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: () {
-                    // Show a quick logout snackbar
-                    Get.snackbar(
-                      'Signed Out',
-                      'You have logged out successfully.',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: const Color(0xFF05352F),
-                      colorText: Colors.white,
-                      margin: const EdgeInsets.all(16),
-                      borderRadius: 8,
-                    );
-                    // Navigate back to Login and clear history
-                    Get.offAll(() => const Login());
+                  onPressed: () async {
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                      Get.snackbar(
+                        'Signed Out',
+                        'You have logged out successfully.',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: const Color(0xFF05352F),
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                      Get.offAll(() => const Login());
+                    } catch (e) {
+                      Get.snackbar(
+                        'Sign Out Error',
+                        e.toString(),
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red.shade800,
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                    }
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(
@@ -245,7 +291,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    "SIGN OUT",
+                    "Log Out",
                     style: GoogleFonts.plusJakartaSans(
                       textStyle: const TextStyle(
                         fontSize: 14,
@@ -277,11 +323,7 @@ class ProfileScreen extends StatelessWidget {
           color: const Color(0xFFFAF9F5),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          color: const Color(0xFF05352F),
-          size: 20,
-        ),
+        child: Icon(icon, color: const Color(0xFF05352F), size: 20),
       ),
       title: Text(
         title,
