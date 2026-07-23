@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../Controller/address_controller.dart';
+import '../Controller/salon_controller.dart';
 import 'all_salons_screen.dart';
+import 'notifications_screen.dart';
 import 'salon_detail_bottom_sheet.dart';
+import 'select_location_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -48,37 +52,68 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFAF9F5),
         elevation: 0,
-        toolbarHeight: 80,
+        toolbarHeight: 64,
         titleSpacing: 0,
         title: Padding(
-          padding: const EdgeInsets.only(left: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Hello, Beautiful",
-                style: GoogleFonts.playfairDisplay(
-                  textStyle: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF05352F),
+          padding: const EdgeInsets.only(left: 20.0),
+          child: Obx(() {
+            final addrCtrl = Get.find<AddressController>();
+            final selected = addrCtrl.selectedAddress.value;
+            final locationName = selected?.locationName ?? 'Set Location';
+            final locationAddress = selected != null
+                ? selected.address
+                : 'Tap to add your address';
+            return GestureDetector(
+              onTap: () => Get.to(() => const SelectLocationScreen()),
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFF05352F),
+                        size: 17,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        locationName,
+                        style: GoogleFonts.playfairDisplay(
+                          textStyle: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF05352F),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Color(0xFF05352F),
+                        size: 18,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                "Book Your Next Experience",
-                style: GoogleFonts.plusJakartaSans(
-                  textStyle: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF7A8D87),
-                    fontWeight: FontWeight.w400,
+                  const SizedBox(height: 2),
+                  Text(
+                    locationAddress,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF7A8D87),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          }),
         ),
         actions: [
           Padding(
@@ -104,7 +139,11 @@ class HomeScreen extends StatelessWidget {
                         color: Color(0xFF05352F),
                         size: 24,
                       ),
-                      onPressed: () {},
+                      onPressed: () => Get.to(
+                        () => const NotificationsScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -169,14 +208,43 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+
+              // Greeting
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Hello, Beautiful",
+                    style: GoogleFonts.playfairDisplay(
+                      textStyle: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF05352F),
+                      ),
+                    ),
+                  ),
+                  // const SizedBox(height: 2),
+                  // Text(
+                  //   "Book Your Next Experience",
+                  //   style: GoogleFonts.plusJakartaSans(
+                  //     textStyle: const TextStyle(
+                  //       fontSize: 12,
+                  //       color: Color(0xFF7A8D87),
+                  //       fontWeight: FontWeight.w400,
+                  //     ),
+                  //   ),
+                  // ),
+                ],
+              ),
+              // const SizedBox(height: 20),
 
               // Categories Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Explore Categories",
+                    "Explore Categories . . . .",
                     style: GoogleFonts.playfairDisplay(
                       textStyle: const TextStyle(
                         fontSize: 18,
@@ -211,42 +279,56 @@ class HomeScreen extends StatelessWidget {
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final item = categories[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 20.0),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color.fromRGBO(0, 0, 0, 0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              item['icon'] as IconData,
-                              color: const Color(0xFF05352F),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item['name'] as String,
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF4C6B64),
+                    final categoryName = item['name'] as String;
+                    return GestureDetector(
+                      onTap: () {
+                        final salonsCtrl = Get.isRegistered<SalonsController>()
+                            ? Get.find<SalonsController>()
+                            : Get.put(SalonsController());
+                        salonsCtrl.updateCategory(categoryName);
+                        Get.to(
+                          () => AllSalonsScreen(initialCategory: categoryName),
+                          transition: Transition.rightToLeft,
+                          duration: const Duration(milliseconds: 300),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 20.0),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color.fromRGBO(0, 0, 0, 0.02),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                item['icon'] as IconData,
+                                color: const Color(0xFF05352F),
+                                size: 24,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            Text(
+                              categoryName,
+                              style: GoogleFonts.plusJakartaSans(
+                                textStyle: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF4C6B64),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -418,129 +500,130 @@ class HomeScreen extends StatelessWidget {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (context) => SalonDetailBottomSheet(salonData: salon),
+                            builder: (context) =>
+                                SalonDetailBottomSheet(salonData: salon),
                           );
                         },
                         child: Row(
                           children: [
-                        // Luxury placeholder for salon image
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5EFE0),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
+                            // Luxury placeholder for salon image
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5EFE0),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                ),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    const Color(0xFF05352F).withOpacity(0.08),
+                                    const Color(0xFFE8D5AF).withOpacity(0.2),
+                                  ],
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.spa_outlined,
+                                  color: Color(0xFF05352F),
+                                  size: 30,
+                                ),
+                              ),
                             ),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF05352F).withOpacity(0.08),
-                                const Color(0xFFE8D5AF).withOpacity(0.2),
-                              ],
-                            ),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.spa_outlined,
-                              color: Color(0xFF05352F),
-                              size: 30,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        salon['name']!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.playfairDisplay(
-                                          textStyle: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF05352F),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            salon['name']!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.playfairDisplay(
+                                              textStyle: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF05352F),
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                        Text(
+                                          salon['price']!,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            textStyle: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF9E7E45),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      salon['price']!,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        textStyle: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
                                           color: Color(0xFF9E7E45),
+                                          size: 14,
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.star,
-                                      color: Color(0xFF9E7E45),
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      salon['rating']!,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        textStyle: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF6E7E7A),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on_outlined,
-                                      color: Color(0xFF7A8D87),
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        salon['location']!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          textStyle: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF7A8D87),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          salon['rating']!,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            textStyle: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF6E7E7A),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on_outlined,
+                                          color: Color(0xFF7A8D87),
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            salon['location']!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              textStyle: const TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFF7A8D87),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                },
               ),
               const SizedBox(height: 100),
             ],

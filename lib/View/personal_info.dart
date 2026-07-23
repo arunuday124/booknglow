@@ -16,7 +16,10 @@ class PersonalInfoScreen extends StatelessWidget {
   static const _mutedTeal = Color(0xFF7A8D87);
   static const _cardBg = Colors.white;
 
-  void _showImagePickerSourceSheet(BuildContext context, PersonalInfoController controller) {
+  void _showImagePickerSourceSheet(
+    BuildContext context,
+    PersonalInfoController controller,
+  ) {
     Get.bottomSheet(
       Container(
         decoration: const BoxDecoration(
@@ -28,7 +31,10 @@ class PersonalInfoScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 20.0,
+              horizontal: 24.0,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,25 +51,41 @@ class PersonalInfoScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, color: _deepGreen),
-                  title: Text("Take Photo", style: GoogleFonts.plusJakartaSans()),
+                  leading: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: _deepGreen,
+                  ),
+                  title: Text(
+                    "Take Photo",
+                    style: GoogleFonts.plusJakartaSans(),
+                  ),
                   onTap: () {
                     Get.back();
                     controller.pickAndCropImage(ImageSource.camera);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: _deepGreen),
-                  title: Text("Choose from Gallery", style: GoogleFonts.plusJakartaSans()),
+                  leading: const Icon(
+                    Icons.photo_library_outlined,
+                    color: _deepGreen,
+                  ),
+                  title: Text(
+                    "Choose from Gallery",
+                    style: GoogleFonts.plusJakartaSans(),
+                  ),
                   onTap: () {
                     Get.back();
                     controller.pickAndCropImage(ImageSource.gallery);
                   },
                 ),
                 Obx(() {
-                  if (controller.selectedImagePath.value != null || controller.currentPhotoUrl.value != null) {
+                  if (controller.selectedImagePath.value != null ||
+                      controller.currentPhotoUrl.value != null) {
                     return ListTile(
-                      leading: const Icon(Icons.delete_outline, color: Colors.red),
+                      leading: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                      ),
                       title: Text(
                         "Remove Current Photo",
                         style: GoogleFonts.plusJakartaSans(color: Colors.red),
@@ -94,27 +116,9 @@ class PersonalInfoScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: _cream,
         elevation: 0,
-        leading: GestureDetector(
-          onTap: () => Get.back(),
-          child: Container(
-            margin: const EdgeInsets.only(left: 16),
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color.fromRGBO(0, 0, 0, 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 16,
-              color: _deepGreen,
-            ),
-          ),
+        leading: IconButton(
+          onPressed: () => Get.back(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _deepGreen),
         ),
         title: Text(
           "Personal Information",
@@ -158,12 +162,22 @@ class PersonalInfoScreen extends StatelessWidget {
 
                           Widget avatarChild;
                           if (localPath != null) {
-                            avatarChild = Image.file(File(localPath), fit: BoxFit.cover);
-                          } else if (currentUrl != null && currentUrl.isNotEmpty) {
+                            avatarChild = Image.file(
+                              File(localPath),
+                              fit: BoxFit.cover,
+                            );
+                          } else if (currentUrl != null &&
+                              currentUrl.isNotEmpty) {
                             if (currentUrl.startsWith('http')) {
-                              avatarChild = Image.network(currentUrl, fit: BoxFit.cover);
+                              avatarChild = Image.network(
+                                currentUrl,
+                                fit: BoxFit.cover,
+                              );
                             } else {
-                              avatarChild = Image.file(File(currentUrl), fit: BoxFit.cover);
+                              avatarChild = Image.file(
+                                File(currentUrl),
+                                fit: BoxFit.cover,
+                              );
                             }
                           } else {
                             avatarChild = Text(
@@ -232,7 +246,6 @@ class PersonalInfoScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-
               // ─── Form card ────────────────────────────────────────────────
               Container(
                 width: double.infinity,
@@ -268,6 +281,18 @@ class PersonalInfoScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
+                    // Email (Locked)
+                    _fieldLabel("EMAIL ADDRESS"),
+                    const SizedBox(height: 6),
+                    _buildField(
+                      controller: controller.emailController,
+                      hint: "e.g. victoria@example.com",
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 24),
+
                     // Phone Number
                     _fieldLabel("PHONE NUMBER"),
                     const SizedBox(height: 6),
@@ -288,24 +313,6 @@ class PersonalInfoScreen extends StatelessWidget {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
-
-                    // Address
-                    _fieldLabel("ADDRESS"),
-                    const SizedBox(height: 6),
-                    _buildField(
-                      controller: controller.addressController,
-                      hint: "e.g. 42 Rosewood Lane, Mumbai",
-                      icon: Icons.location_on_outlined,
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLines: 3,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter your address';
-                        }
-                        return null;
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -317,10 +324,17 @@ class PersonalInfoScreen extends StatelessWidget {
                 height: 54,
                 child: Obx(
                   () => ElevatedButton(
-                    onPressed: controller.isLoading.value ? null : controller.updateProfile,
+                    onPressed: controller.isLoading.value
+                        ? null
+                        : controller.updateProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _deepGreen,
-                      disabledBackgroundColor: const Color.fromRGBO(5, 53, 47, 0.6),
+                      disabledBackgroundColor: const Color.fromRGBO(
+                        5,
+                        53,
+                        47,
+                        0.6,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -339,9 +353,9 @@ class PersonalInfoScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(
-                               Icons.check_rounded,
-                               color: Color(0xFFE8D5AF),
-                               size: 18,
+                                Icons.check_rounded,
+                                color: Color(0xFFE8D5AF),
+                                size: 18,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -393,36 +407,50 @@ class PersonalInfoScreen extends StatelessWidget {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     int maxLines = 1,
+    bool readOnly = false,
+    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
       inputFormatters: inputFormatters,
       validator: validator,
       maxLines: maxLines,
       style: GoogleFonts.plusJakartaSans(
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           fontSize: 15,
-          color: Color(0xFF2C3E3A),
+          color: readOnly ? const Color(0xFF7A8D87) : const Color(0xFF2C3E3A),
         ),
       ),
       decoration: InputDecoration(
         prefixIcon: Padding(
           padding: const EdgeInsets.only(right: 8.0),
-          child: Icon(icon, size: 18, color: const Color(0xFF4C6B64)),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 40),
-        hintText: hint,
-        hintStyle: GoogleFonts.plusJakartaSans(
-          textStyle: TextStyle(
-            color: Colors.grey.shade400,
-            fontSize: 14,
+          child: Icon(
+            icon,
+            size: 18,
+            color: readOnly ? const Color(0xFF7A8D87) : const Color(0xFF4C6B64),
           ),
         ),
-        contentPadding: EdgeInsets.symmetric(
-          vertical: maxLines > 1 ? 14 : 8,
+        prefixIconConstraints: const BoxConstraints(minWidth: 40),
+        suffixIcon: suffixIcon ??
+            (readOnly
+                ? const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: Icon(
+                      Icons.lock_outline_rounded,
+                      size: 16,
+                      color: Color(0xFF7A8D87),
+                    ),
+                  )
+                : null),
+        suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+        hintText: hint,
+        hintStyle: GoogleFonts.plusJakartaSans(
+          textStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
         ),
+        contentPadding: EdgeInsets.symmetric(vertical: maxLines > 1 ? 14 : 8),
         isDense: true,
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.grey.shade200, width: 1.2),

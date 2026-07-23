@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../View/main_navigation_screen.dart';
+import '../service/user_service.dart';
 
 class LoginController extends GetxController {
   // Text input controllers
@@ -69,7 +70,16 @@ class LoginController extends GetxController {
     isLoading.value = true;
 
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Save / merge user document in Firestore "user" collection
+      if (userCredential.user != null) {
+        await UserService.createOrUpdateUser(userCredential.user!);
+      }
+
       isLoading.value = false;
       Get.snackbar(
         'Welcome Back',
@@ -131,8 +141,7 @@ class LoginController extends GetxController {
       final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
 
       // Get the ID token from the authenticated account
-      final GoogleSignInAuthentication googleAuth =
-          googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       // Create a Firebase credential — idToken is sufficient for Firebase Auth
       final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -140,7 +149,12 @@ class LoginController extends GetxController {
       );
 
       // Sign in to Firebase with the credential
-      await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // Save / merge user document in Firestore "user" collection
+      if (userCredential.user != null) {
+        await UserService.createOrUpdateUser(userCredential.user!);
+      }
 
       isGoogleLoading.value = false;
 

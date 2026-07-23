@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../service/user_service.dart';
 
 class PersonalInfoController extends GetxController {
   final formKey = GlobalKey<FormState>();
 
   late final TextEditingController nameController;
+  late final TextEditingController emailController;
   late final TextEditingController phoneController;
   late final TextEditingController addressController;
 
@@ -19,17 +21,50 @@ class PersonalInfoController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final user = FirebaseAuth.instance.currentUser;
-    nameController = TextEditingController(text: user?.displayName ?? '');
-    phoneController = TextEditingController(text: user?.phoneNumber ?? '');
+    nameController = TextEditingController();
+    emailController = TextEditingController();
+    phoneController = TextEditingController();
     addressController = TextEditingController();
-    currentPhotoUrl.value = user?.photoURL;
 
-    // Listen to name changes to update initials reactively
-    _updateInitials(nameController.text);
     nameController.addListener(() {
       _updateInitials(nameController.text);
     });
+
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    emailController.text = user?.email ?? '';
+
+    // Fetches user profile (cached after first launch, 0 DB calls when changing pages)
+    final userModel = await UserService.getCurrentUser();
+
+    if (userModel != null) {
+      if (userModel.name.isNotEmpty) {
+        nameController.text = userModel.name;
+      } else if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+        nameController.text = user.displayName!;
+      }
+
+      if (userModel.phone != 0) {
+        phoneController.text = userModel.phone.toString();
+      } else if (user?.phoneNumber != null && user!.phoneNumber!.isNotEmpty) {
+        phoneController.text = user.phoneNumber!;
+      }
+
+      if (userModel.profileImages.isNotEmpty) {
+        currentPhotoUrl.value = userModel.profileImages;
+      } else if (user?.photoURL != null) {
+        currentPhotoUrl.value = user!.photoURL;
+      }
+    } else if (user != null) {
+      nameController.text = user.displayName ?? '';
+      phoneController.text = user.phoneNumber ?? '';
+      currentPhotoUrl.value = user.photoURL;
+    }
+
+    _updateInitials(nameController.text);
   }
 
   void _updateInitials(String name) {
@@ -71,18 +106,14 @@ class PersonalInfoController extends GetxController {
             initAspectRatio: CropAspectRatioPreset.square,
             lockAspectRatio: true,
             cropStyle: CropStyle.circle,
-            aspectRatioPresets: const [
-              CropAspectRatioPreset.square,
-            ],
+            aspectRatioPresets: const [CropAspectRatioPreset.square],
           ),
           IOSUiSettings(
             title: 'Edit Photo',
             aspectRatioLockEnabled: true,
             resetAspectRatioEnabled: false,
             cropStyle: CropStyle.circle,
-            aspectRatioPresets: const [
-              CropAspectRatioPreset.square,
-            ],
+            aspectRatioPresets: const [CropAspectRatioPreset.square],
           ),
         ],
       );
@@ -115,25 +146,43 @@ class PersonalInfoController extends GetxController {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      
-      // Update display name
-      await user?.updateDisplayName(nameController.text.trim());
-
-      // If we have a local cropped file path, simulate or save the photo URL.
-      // Firebase Auth allows storing a string URL. We can store the local file URI/path,
-      // or print that in production it would be uploaded to storage.
-      if (selectedImagePath.value != null) {
-        await user?.updatePhotoURL(selectedImagePath.value);
-        currentPhotoUrl.value = selectedImagePath.value;
-      } else if (currentPhotoUrl.value == null) {
-        await user?.updatePhotoURL(null);
+      if (user == null) {
+        throw Exception("User is not logged in.");
       }
 
+      final newName = nameController.text.trim();
+      final phoneDigits = phoneController.text.replaceAll(RegExp(r'\D'), '');
+      final newPhoneInt = int.tryParse(phoneDigits) ?? 0;
+
+      String? photoToSave = currentPhotoUrl.value;
+      if (selectedImagePath.value != null) {
+        photoToSave = selectedImagePath.value;
+        currentPhotoUrl.value = photoToSave;
+      }
+
+      // Update FirebaseAuth user display name & photo URL
+      await user.updateDisplayName(newName);
+      if (photoToSave != null) {
+        await user.updatePhotoURL(photoToSave);
+      }
+
+      // Update Firestore DB document & memory cache
+      final fieldsToUpdate = <String, dynamic>{
+        'name': newName,
+        'phone': newPhoneInt,
+      };
+      if (photoToSave != null) {
+        fieldsToUpdate['profileImages'] = photoToSave;
+      }
+
+      await UserService.updateUserFields(user.uid, fieldsToUpdate);
+
+      _updateInitials(newName);
       isLoading.value = false;
 
       Get.snackbar(
         'Profile Updated',
-        'Your personal information has been saved successfully.',
+        'Your profile has been saved successfully.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFF05352F),
         colorText: Colors.white,
@@ -141,8 +190,6 @@ class PersonalInfoController extends GetxController {
         borderRadius: 8,
         icon: const Icon(Icons.check_circle_outline, color: Colors.white),
       );
-
-      Get.back();
     } catch (e) {
       isLoading.value = false;
 
@@ -158,10 +205,10 @@ class PersonalInfoController extends GetxController {
     }
   }
 
-
   @override
   void onClose() {
     nameController.dispose();
+    emailController.dispose();
     phoneController.dispose();
     addressController.dispose();
     super.onClose();

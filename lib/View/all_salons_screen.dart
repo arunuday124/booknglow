@@ -5,12 +5,18 @@ import '../Controller/salon_controller.dart';
 import 'salon_detail_bottom_sheet.dart';
 
 class AllSalonsScreen extends StatelessWidget {
-  const AllSalonsScreen({super.key});
+  final String? initialCategory;
+
+  const AllSalonsScreen({super.key, this.initialCategory});
 
   @override
   Widget build(BuildContext context) {
     // Inject the controller
     final controller = Get.put(SalonsController());
+
+    if (initialCategory != null && controller.categories.contains(initialCategory)) {
+      controller.updateCategory(initialCategory!);
+    }
 
     // Local Text controller for the search field to clear/set state easily
     final searchFieldController = TextEditingController(text: controller.searchQuery.value);

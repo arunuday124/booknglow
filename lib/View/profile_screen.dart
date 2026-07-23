@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
+import 'notifications_screen.dart';
 import 'personal_info.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -232,7 +233,11 @@ class ProfileScreen extends StatelessWidget {
                     _buildOption(
                       icon: Icons.notifications_none_outlined,
                       title: "Notifications",
-                      onTap: () {},
+                      onTap: () => Get.to(
+                        () => const NotificationsScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                     const Divider(height: 1, color: Color(0xFFFAF9F5)),
                     _buildOption(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../Controller/address_controller.dart';
 import '../Controller/navigation_controller.dart';
 import 'home_screen.dart';
 import 'bookings_screen.dart';
@@ -13,6 +14,10 @@ class MainNavigationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Inject or retrieve NavigationController
     final controller = Get.put(NavigationController());
+    // Register AddressController globally so HomeScreen's AppBar can find it
+    if (!Get.isRegistered<AddressController>()) {
+      Get.put(AddressController());
+    }
 
     // Screens list corresponding to indices
     final List<Widget> screens = const [
