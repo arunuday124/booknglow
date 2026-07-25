@@ -48,6 +48,11 @@ class SalonDetailBottomSheet extends StatelessWidget {
         ? r'₹₹'
         : salonData['price'] as String;
 
+    final String openingHours = salonData['openingHours']?.toString() ?? '10 AM';
+    final String closingHours = salonData['closingHours']?.toString() ?? '8 PM';
+    final String phone = salonData['phone']?.toString() ?? '';
+    final String ownerName = salonData['ownerName']?.toString() ?? '';
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
@@ -233,13 +238,13 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    
+
                     Row(
                       children: [
                         const Icon(Icons.access_time_rounded, color: Color(0xFF7A8D87), size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          'Open Today: 9:00 AM - 8:00 PM',
+                          'Open Today: $openingHours - $closingHours',
                           style: GoogleFonts.plusJakartaSans(
                             textStyle: const TextStyle(
                               fontSize: 13,
@@ -249,6 +254,44 @@ class SalonDetailBottomSheet extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (phone.isNotEmpty && phone != '0') ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_outlined, color: Color(0xFF7A8D87), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            phone,
+                            style: GoogleFonts.plusJakartaSans(
+                              textStyle: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6E7E7A),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (ownerName.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline_rounded, color: Color(0xFF7A8D87), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Owner: $ownerName',
+                            style: GoogleFonts.plusJakartaSans(
+                              textStyle: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6E7E7A),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 20),
 
                     Divider(color: const Color(0xFFE8D5AF).withOpacity(0.3), height: 1),

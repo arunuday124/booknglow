@@ -13,6 +13,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final salonsCtrl = Get.put(SalonsController());
+
     // Categories list for beauty & wellness
     final List<Map<String, dynamic>> categories = [
       {'name': 'Facial', 'icon': Icons.face_retouching_natural_outlined},
@@ -20,31 +22,6 @@ class HomeScreen extends StatelessWidget {
       {'name': 'Nails', 'icon': Icons.brush_outlined},
       {'name': 'Hair', 'icon': Icons.content_cut_outlined},
       {'name': 'Spa', 'icon': Icons.bathtub_outlined},
-    ];
-
-    // Recommended salons list
-    final List<Map<String, String>> salons = [
-      {
-        'name': 'Aura Wellness & Spa',
-        'rating': '4.9 (124 reviews)',
-        'location': 'Downtown, Luxury Plaza',
-        'image': 'assets/images/salon1.png',
-        'price': '',
-      },
-      {
-        'name': 'Glow & Co. Hair Boutique',
-        'rating': '4.8 (98 reviews)',
-        'location': 'Westside Avenue, Lane 5',
-        'image': 'assets/images/salon2.png',
-        'price': '',
-      },
-      {
-        'name': 'Elegance Nail Studio',
-        'rating': '4.7 (86 reviews)',
-        'location': 'Midtown Shopping Arcade',
-        'image': 'assets/images/salon3.png',
-        'price': '',
-      },
     ];
 
     return Scaffold(
@@ -472,159 +449,206 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Salons List
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: salons.length,
-                itemBuilder: (context, index) {
-                  final salon = salons[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(0, 0, 0, 0.02),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+              // Salons List (Top 5 Salons)
+              Obx(() {
+                if (salonsCtrl.isLoading.value && salonsCtrl.salons.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.0),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF05352F),
+                      ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) =>
-                                SalonDetailBottomSheet(salonData: salon),
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            // Luxury placeholder for salon image
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5EFE0),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  bottomLeft: Radius.circular(16),
-                                ),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    const Color(0xFF05352F).withOpacity(0.08),
-                                    const Color(0xFFE8D5AF).withOpacity(0.2),
-                                  ],
-                                ),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.spa_outlined,
-                                  color: Color(0xFF05352F),
-                                  size: 30,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            salon['name']!,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.playfairDisplay(
-                                              textStyle: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF05352F),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          salon['price']!,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            textStyle: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF9E7E45),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.star,
-                                          color: Color(0xFF9E7E45),
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          salon['rating']!,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            textStyle: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF6E7E7A),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.location_on_outlined,
-                                          color: Color(0xFF7A8D87),
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            salon['location']!,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              textStyle: const TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF7A8D87),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                  );
+                }
+
+                final top5 = salonsCtrl.salons.take(5).toList();
+                if (top5.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: Center(
+                      child: Text(
+                        "No salons available",
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          color: const Color(0xFF7A8D87),
                         ),
                       ),
                     ),
                   );
-                },
-              ),
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: top5.length,
+                  itemBuilder: (context, index) {
+                    final salonModel = top5[index];
+                    final salon = salonModel.toMap();
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color.fromRGBO(0, 0, 0, 0.02),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) =>
+                                  SalonDetailBottomSheet(salonData: salon),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              // Luxury placeholder or network image for salon
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5EFE0),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    bottomLeft: Radius.circular(16),
+                                  ),
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color.fromRGBO(5, 53, 47, 0.08),
+                                      Color.fromRGBO(232, 213, 175, 0.2),
+                                    ],
+                                  ),
+                                ),
+                                child: salonModel.shopImage.isNotEmpty
+                                    ? Image.network(
+                                        salonModel.shopImage,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Center(
+                                          child: Icon(
+                                            Icons.spa_outlined,
+                                            color: Color(0xFF05352F),
+                                            size: 30,
+                                          ),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Icon(
+                                          Icons.spa_outlined,
+                                          color: Color(0xFF05352F),
+                                          size: 30,
+                                        ),
+                                      ),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              salonModel.salonName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.playfairDisplay(
+                                                textStyle: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF05352F),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            r'₹₹',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              textStyle: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF9E7E45),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.star,
+                                            color: Color(0xFF9E7E45),
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${salonModel.ratings} (${salonModel.reviews} reviews)',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              textStyle: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF6E7E7A),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on_outlined,
+                                            color: Color(0xFF7A8D87),
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              salonModel.address.isNotEmpty
+                                                  ? salonModel.address
+                                                  : 'Location unavailable',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                textStyle: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Color(0xFF7A8D87),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
               const SizedBox(height: 100),
             ],
           ),

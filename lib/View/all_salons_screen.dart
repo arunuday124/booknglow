@@ -218,11 +218,19 @@ class AllSalonsScreen extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Salons ListView
+          // Salons ListView (with Pagination support)
           Expanded(
             child: Obx(() {
-              final salons = controller.filteredSalons;
-              if (salons.isEmpty) {
+              if (controller.isLoading.value && controller.salons.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF05352F),
+                  ),
+                );
+              }
+
+              final filteredList = controller.filteredSalons;
+              if (filteredList.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -258,22 +266,39 @@ class AllSalonsScreen extends StatelessWidget {
                 );
               }
 
+              final bool showLoader = controller.isLoadingMore.value;
+
               return ListView.builder(
+                controller: controller.scrollController,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                itemCount: salons.length,
+                itemCount: filteredList.length + (showLoader ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final salon = salons[index];
+                  if (index == filteredList.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF05352F),
+                          strokeWidth: 2.5,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final salonModel = filteredList[index];
+                  final salon = salonModel.toMap();
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 18.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
-                          color: const Color.fromRGBO(0, 0, 0, 0.02),
+                          color: Color.fromRGBO(0, 0, 0, 0.02),
                           blurRadius: 16,
-                          offset: const Offset(0, 8),
+                          offset: Offset(0, 8),
                         ),
                       ],
                     ),
@@ -290,30 +315,42 @@ class AllSalonsScreen extends StatelessWidget {
                         },
                         child: Row(
                           children: [
-                            // Luxury placeholder for salon image
+                            // Luxury placeholder or network image for salon
                             Container(
                               width: 110,
                               height: 110,
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF5EFE0),
-                                gradient: LinearGradient(
+                                gradient: const LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    const Color(0xFF05352F).withOpacity(0.08),
-                                    const Color(0xFFE8D5AF).withOpacity(0.25),
+                                    Color.fromRGBO(5, 53, 47, 0.08),
+                                    Color.fromRGBO(232, 213, 175, 0.25),
                                   ],
                                 ),
                               ),
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  Icon(
-                                    salon['icon'] as IconData,
-                                    color: const Color(0xFF05352F),
-                                    size: 34,
-                                  ),
-                                  // Status Badge (Open / Closed)
+                                  salonModel.shopImage.isNotEmpty
+                                      ? Image.network(
+                                          salonModel.shopImage,
+                                          width: 110,
+                                          height: 110,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => const Icon(
+                                            Icons.spa_outlined,
+                                            color: Color(0xFF05352F),
+                                            size: 34,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.spa_outlined,
+                                          color: Color(0xFF05352F),
+                                          size: 34,
+                                        ),
+                                  // Status Badge (OPEN)
                                   Positioned(
                                     bottom: 8,
                                     left: 8,
@@ -323,13 +360,11 @@ class AllSalonsScreen extends StatelessWidget {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: salon['isOpen']
-                                            ? const Color(0xFF05352F).withOpacity(0.9)
-                                            : const Color(0xFF9E7E45).withOpacity(0.9),
+                                        color: const Color(0xFF05352F).withOpacity(0.9),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        salon['isOpen'] ? 'OPEN' : 'CLOSED',
+                                        'OPEN',
                                         style: GoogleFonts.plusJakartaSans(
                                           textStyle: const TextStyle(
                                             fontSize: 8,
@@ -364,7 +399,9 @@ class AllSalonsScreen extends StatelessWidget {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            (salon['categories'] as List<String>).join(', '),
+                                            salonModel.categories.isNotEmpty
+                                                ? salonModel.categories.join(', ')
+                                                : 'Salon',
                                             style: GoogleFonts.plusJakartaSans(
                                               textStyle: const TextStyle(
                                                 fontSize: 10,
@@ -375,7 +412,7 @@ class AllSalonsScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          salon['price'] as String,
+                                          r'₹₹',
                                           style: GoogleFonts.plusJakartaSans(
                                             textStyle: const TextStyle(
                                               fontSize: 11,
@@ -390,7 +427,7 @@ class AllSalonsScreen extends StatelessWidget {
 
                                     // Salon Name
                                     Text(
-                                      salon['name'] as String,
+                                      salonModel.salonName,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.playfairDisplay(
@@ -413,7 +450,7 @@ class AllSalonsScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '${salon['rating']} ',
+                                          '${salonModel.ratings} ',
                                           style: GoogleFonts.plusJakartaSans(
                                             textStyle: const TextStyle(
                                               fontSize: 11,
@@ -423,7 +460,7 @@ class AllSalonsScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          '(${salon['reviews']})',
+                                          '(${salonModel.reviews} reviews)',
                                           style: GoogleFonts.plusJakartaSans(
                                             textStyle: const TextStyle(
                                               fontSize: 11,
@@ -446,7 +483,9 @@ class AllSalonsScreen extends StatelessWidget {
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
-                                            salon['location'] as String,
+                                            salonModel.address.isNotEmpty
+                                                ? salonModel.address
+                                                : 'Location unavailable',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.plusJakartaSans(
