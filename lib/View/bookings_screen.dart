@@ -124,33 +124,29 @@ class UpcomingBookingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Demo upcoming booking
-    final List<Map<String, String>> bookings = [
-      {
-        'salon': 'Aura Wellness & Spa',
-        'service': 'Aromatherapy Massage',
-        'date': 'Friday, July 24, 2026',
-        'time': '03:30 PM',
-        'status': 'Confirmed',
-        'price': '₹85.00',
-      },
-      {
-        'salon': 'Glow & Co. Hair Boutique',
-        'service': 'Premium Hydrafacial & Blowout',
-        'date': 'Wednesday, August 05, 2026',
-        'time': '11:00 AM',
-        'status': 'Pending',
-        'price': '₹140.00',
-      }
-    ];
+    final controller = Get.find<BookingsController>();
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 24.0, bottom: 100.0),
-      physics: const BouncingScrollPhysics(),
-      itemCount: bookings.length,
-      itemBuilder: (context, index) {
-        final booking = bookings[index];
-        final isConfirmed = booking['status'] == 'Confirmed';
+    return Obx(() {
+      final bookings = controller.upcomingBookings;
+      if (bookings.isEmpty) {
+        return Center(
+          child: Text(
+            "No upcoming bookings yet",
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              color: const Color(0xFF7A8D87),
+            ),
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 24.0, bottom: 100.0),
+        physics: const BouncingScrollPhysics(),
+        itemCount: bookings.length,
+        itemBuilder: (context, index) {
+          final booking = bookings[index];
+          final isConfirmed = booking['status'] == 'Confirmed';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 20.0),
@@ -351,6 +347,7 @@ class UpcomingBookingsTab extends StatelessWidget {
         );
       },
     );
+    });
   }
 }
 

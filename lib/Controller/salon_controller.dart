@@ -262,4 +262,10 @@ class SalonDetailController extends GetxController {
         selectedTime.value.isNotEmpty &&
         selectedServices.isNotEmpty;
   }
+
+  void resetSelections() {
+    selectedDate.value = null;
+    selectedTime.value = '';
+    selectedServices.clear();
+  }
 }

@@ -1,48 +1,33 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../Controller/personal_info_controller.dart';
 import 'login.dart';
-import 'notifications_screen.dart';
 import 'personal_info.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  static Widget _buildInitials(String initials) {
+    return Text(
+      initials,
+      style: GoogleFonts.playfairDisplay(
+        textStyle: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFFE8D5AF),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(PersonalInfoController());
     final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? "victoria.sterling@elegance.com";
 
-    String displayName = "Victoria Sterling";
-    if (user != null) {
-      if (user.displayName != null && user.displayName!.isNotEmpty) {
-        displayName = user.displayName!;
-      } else if (user.email != null) {
-        final parts = user.email!.split('@');
-        if (parts.isNotEmpty) {
-          final rawName = parts[0];
-          displayName =
-              rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
-        }
-      }
-    }
-
-    String initials = "VS";
-    if (displayName.isNotEmpty) {
-      final names = displayName.trim().split(RegExp(r'\s+'));
-      if (names.length >= 2) {
-        initials =
-            (names[0].isNotEmpty ? names[0][0] : '') +
-            (names[1].isNotEmpty ? names[1][0] : '');
-        initials = initials.toUpperCase();
-      } else if (names.isNotEmpty && names[0].isNotEmpty) {
-        initials = names[0][0].toUpperCase();
-        if (names[0].length > 1) {
-          initials += names[0][1].toUpperCase();
-        }
-      }
-    }
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F5),
       appBar: AppBar(
@@ -83,103 +68,189 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    // Avatar with golden border decoration
-                    Container(
-                      padding: const EdgeInsets.all(4.0),
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFE8D5AF), Color(0xFF9E7E45)],
+                child: Obx(() {
+                  final localPath = controller.selectedImagePath.value;
+                  final currentUrl =
+                      controller.currentPhotoUrl.value ?? user?.photoURL;
+
+                  final nameFromCtrl = controller.nameController.text.trim();
+                  String displayName = nameFromCtrl.isNotEmpty
+                      ? nameFromCtrl
+                      : "Victoria Sterling";
+                  if (nameFromCtrl.isEmpty && user != null) {
+                    if (user.displayName != null &&
+                        user.displayName!.isNotEmpty) {
+                      displayName = user.displayName!;
+                    } else if (user.email != null) {
+                      final parts = user.email!.split('@');
+                      if (parts.isNotEmpty) {
+                        final rawName = parts[0];
+                        displayName =
+                            rawName.substring(0, 1).toUpperCase() +
+                            rawName.substring(1);
+                      }
+                    }
+                  }
+
+                  final emailFromCtrl = controller.emailController.text.trim();
+                  final email = emailFromCtrl.isNotEmpty
+                      ? emailFromCtrl
+                      : (user?.email ?? "victoria.sterling@elegance.com");
+
+                  String initials = controller.nameInitials.value;
+                  if (initials == '?' || initials.isEmpty) {
+                    if (displayName.isNotEmpty) {
+                      final names = displayName.trim().split(RegExp(r'\s+'));
+                      if (names.length >= 2) {
+                        initials =
+                            (names[0].isNotEmpty ? names[0][0] : '') +
+                            (names[1].isNotEmpty ? names[1][0] : '');
+                        initials = initials.toUpperCase();
+                      } else if (names.isNotEmpty && names[0].isNotEmpty) {
+                        initials = names[0][0].toUpperCase();
+                        if (names[0].length > 1) {
+                          initials += names[0][1].toUpperCase();
+                        }
+                      }
+                    } else {
+                      initials = "VS";
+                    }
+                  }
+
+                  Widget avatarContent;
+                  if (localPath != null &&
+                      localPath.isNotEmpty &&
+                      File(localPath).existsSync()) {
+                    avatarContent = Image.file(
+                      File(localPath),
+                      fit: BoxFit.cover,
+                      width: 86,
+                      height: 86,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildInitials(initials),
+                    );
+                  } else if (currentUrl != null && currentUrl.isNotEmpty) {
+                    if (currentUrl.startsWith('http://') ||
+                        currentUrl.startsWith('https://')) {
+                      avatarContent = Image.network(
+                        currentUrl,
+                        fit: BoxFit.cover,
+                        width: 86,
+                        height: 86,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildInitials(initials),
+                      );
+                    } else if (File(currentUrl).existsSync()) {
+                      avatarContent = Image.file(
+                        File(currentUrl),
+                        fit: BoxFit.cover,
+                        width: 86,
+                        height: 86,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildInitials(initials),
+                      );
+                    } else {
+                      avatarContent = _buildInitials(initials);
+                    }
+                  } else {
+                    avatarContent = _buildInitials(initials);
+                  }
+
+                  return Column(
+                    children: [
+                      // Avatar with golden border decoration
+                      Container(
+                        padding: const EdgeInsets.all(4.0),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFE8D5AF), Color(0xFF9E7E45)],
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 46,
-                        backgroundColor: const Color(0xFFFAF9F5),
                         child: CircleAvatar(
-                          radius: 43,
-                          backgroundColor: const Color(0xFF05352F),
-                          child: Text(
-                            initials,
-                            style: GoogleFonts.playfairDisplay(
-                              textStyle: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE8D5AF),
+                          radius: 46,
+                          backgroundColor: const Color(0xFFFAF9F5),
+                          child: CircleAvatar(
+                            radius: 43,
+                            backgroundColor: const Color(0xFF05352F),
+                            child: ClipOval(
+                              child: SizedBox(
+                                width: 86,
+                                height: 86,
+                                child: Center(child: avatarContent),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // User details
-                    Text(
-                      displayName,
-                      style: GoogleFonts.playfairDisplay(
-                        textStyle: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF05352F),
+                      // User details
+                      Text(
+                        displayName,
+                        style: GoogleFonts.playfairDisplay(
+                          textStyle: const TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF05352F),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: GoogleFonts.plusJakartaSans(
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF7A8D87),
-                          fontWeight: FontWeight.w400,
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        style: GoogleFonts.plusJakartaSans(
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF7A8D87),
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    // Gold Tier Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAF6EE),
-                        border: Border.all(
-                          color: const Color(0xFFE8D5AF),
-                          width: 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.workspace_premium_outlined,
-                            size: 14,
-                            color: Color(0xFF9E7E45),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "GOLD TIER MEMBER",
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF9E7E45),
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                      // Gold Tier Badge
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(
+                      //     horizontal: 14,
+                      //     vertical: 6,
+                      //   ),
+                      //   decoration: BoxDecoration(
+                      //     color: const Color(0xFFFAF6EE),
+                      //     border: Border.all(
+                      //       color: const Color(0xFFE8D5AF),
+                      //       width: 1.0,
+                      //     ),
+                      //     borderRadius: BorderRadius.circular(20),
+                      //   ),
+                      //   child: Row(
+                      //     mainAxisSize: MainAxisSize.min,
+                      //     children: [
+                      //       const Icon(
+                      //         Icons.workspace_premium_outlined,
+                      //         size: 14,
+                      //         color: Color(0xFF9E7E45),
+                      //       ),
+                      //       const SizedBox(width: 6),
+                      //       Text(
+                      //         "GOLD TIER MEMBER",
+                      //         style: GoogleFonts.plusJakartaSans(
+                      //           textStyle: const TextStyle(
+                      //             fontSize: 10,
+                      //             fontWeight: FontWeight.bold,
+                      //             color: Color(0xFF9E7E45),
+                      //             letterSpacing: 0.8,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                    ],
+                  );
+                }),
               ),
               const SizedBox(height: 28),
 
@@ -229,16 +300,16 @@ class ProfileScreen extends StatelessWidget {
                       title: "Payment Methods",
                       onTap: () {},
                     ),
-                    const Divider(height: 1, color: Color(0xFFFAF9F5)),
-                    _buildOption(
-                      icon: Icons.notifications_none_outlined,
-                      title: "Notifications",
-                      onTap: () => Get.to(
-                        () => const NotificationsScreen(),
-                        transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300),
-                      ),
-                    ),
+                    // const Divider(height: 1, color: Color(0xFFFAF9F5)),
+                    // _buildOption(
+                    //   icon: Icons.notifications_none_outlined,
+                    //   title: "Notifications",
+                    //   onTap: () => Get.to(
+                    //     () => const NotificationsScreen(),
+                    //     transition: Transition.rightToLeft,
+                    //     duration: const Duration(milliseconds: 300),
+                    //   ),
+                    // ),
                     const Divider(height: 1, color: Color(0xFFFAF9F5)),
                     _buildOption(
                       icon: Icons.shield_outlined,

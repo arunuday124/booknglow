@@ -36,10 +36,24 @@ class HomeScreen extends StatelessWidget {
           child: Obx(() {
             final addrCtrl = Get.find<AddressController>();
             final selected = addrCtrl.selectedAddress.value;
-            final locationName = selected?.locationName ?? 'Set Location';
-            final locationAddress = selected != null
-                ? selected.address
-                : 'Tap to add your address';
+            final locationName = selected?.locationName.isNotEmpty == true
+                ? selected!.locationName
+                : 'Set Location';
+            String locationAddress = 'Tap to add your address';
+            if (selected != null) {
+              final full = selected.address.trim();
+              final locName = selected.locationName.trim();
+              if (locName.isNotEmpty) {
+                final idx = full.toLowerCase().indexOf(locName.toLowerCase());
+                if (idx != -1) {
+                  locationAddress = full.substring(idx).trim();
+                } else {
+                  locationAddress = full;
+                }
+              } else {
+                locationAddress = full;
+              }
+            }
             return GestureDetector(
               onTap: () => Get.to(() => const SelectLocationScreen()),
               behavior: HitTestBehavior.opaque,

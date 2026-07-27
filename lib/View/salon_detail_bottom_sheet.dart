@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Controller/salon_controller.dart';
+import 'payment_screen.dart';
 
 class SalonDetailBottomSheet extends StatelessWidget {
   final Map<String, dynamic> salonData;
@@ -11,14 +12,6 @@ class SalonDetailBottomSheet extends StatelessWidget {
   String _getWeekdayName(DateTime date) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days[date.weekday - 1];
-  }
-
-  String _getMonthName(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return months[date.month - 1];
   }
 
   @override
@@ -53,104 +46,112 @@ class SalonDetailBottomSheet extends StatelessWidget {
     final String phone = salonData['phone']?.toString() ?? '';
     final String ownerName = salonData['ownerName']?.toString() ?? '';
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFAF9F5), // Premium alabaster
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        child: Column(
-          children: [
-            // Drag handle indicator (overlay on image)
-            Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                // 1. Shop Image Banner
-                Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5EFE0),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF05352F).withOpacity(0.12),
-                        const Color(0xFFE8D5AF).withOpacity(0.3),
-                      ],
-                    ),
-                  ),
-                  child: Image.asset(
-                    salonData['image'] ?? 'assets/images/salon_aura.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF05352F), Color(0xFF0A4D45)],
-                        ),
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        controller.resetSelections();
+      },
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFFAF9F5), // Premium alabaster
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Column(
+            children: [
+              // Drag handle indicator (overlay on image)
+              Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  // 1. Shop Image Banner
+                  Container(
+                    height: 160,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5EFE0),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF05352F).withValues(alpha: 0.12),
+                          const Color(0xFFE8D5AF).withValues(alpha: 0.3),
+                        ],
                       ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.spa_outlined,
-                              color: Color(0xFFE8D5AF),
-                              size: 48,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Book'N'Glow Experience",
-                              style: GoogleFonts.playfairDisplay(
-                                textStyle: const TextStyle(
-                                  color: Color(0xFFFAF9F5),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
+                    ),
+                    child: Image.asset(
+                      salonData['image'] ?? 'assets/images/salon_aura.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF05352F), Color(0xFF0A4D45)],
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.spa_outlined,
+                                color: Color(0xFFE8D5AF),
+                                size: 48,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Book'N'Glow Experience",
+                                style: GoogleFonts.playfairDisplay(
+                                  textStyle: const TextStyle(
+                                    color: Color(0xFFFAF9F5),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                // Drag handle bar
-                Positioned(
-                  top: 10,
-                  child: Container(
-                    width: 48,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(2),
+                  // Drag handle bar
+                  Positioned(
+                    top: 10,
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
 
-                // Close Button (overlay)
-                Positioned(
-                  top: 10,
-                  right: 16,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
-                      onPressed: () => Get.back(),
+                  // Close Button (overlay)
+                  Positioned(
+                    top: 10,
+                    right: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                        onPressed: () {
+                          controller.resetSelections();
+                          Get.back();
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+
 
             // Scrollable Content
             Expanded(
@@ -615,19 +616,25 @@ class SalonDetailBottomSheet extends StatelessWidget {
                               borderRadius: 12,
                             );
                           } else {
-                            final date = controller.selectedDate.value!;
-                            final formattedDate = "${_getWeekdayName(date)}, ${_getMonthName(date)} ${date.day}";
-                            
+                            final selectedDate = controller.selectedDate.value!;
+                            final selectedTime = controller.selectedTime.value;
+                            final selectedServices = controller.availableServices
+                                .where((s) => controller.selectedServices.contains(s['name']))
+                                .toList();
+                            final itemTotal = controller.totalPrice;
+
+                            controller.resetSelections();
                             Get.back(); // close bottom sheet
-                            Get.snackbar(
-                              'Booking Success',
-                              'Appointment confirmed at $name on $formattedDate at ${controller.selectedTime.value} for ₹${controller.totalPrice.toStringAsFixed(0)}!',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: const Color(0xFF0A3932),
-                              colorText: Colors.white,
-                              margin: const EdgeInsets.all(16),
-                              borderRadius: 12,
-                              icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+
+                            Get.to(
+                              () => PaymentScreen(
+                                salonName: name,
+                                salonLocation: location,
+                                selectedDate: selectedDate,
+                                selectedTime: selectedTime,
+                                services: selectedServices,
+                                itemTotal: itemTotal,
+                              ),
                             );
                           }
                         },
@@ -649,6 +656,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
