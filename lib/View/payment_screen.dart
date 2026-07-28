@@ -9,6 +9,7 @@ import 'select_location_screen.dart';
 import 'booking_success_screen.dart';
 
 class PaymentScreen extends StatelessWidget {
+  final String salonId;
   final String salonName;
   final String salonLocation;
   final DateTime selectedDate;
@@ -18,6 +19,7 @@ class PaymentScreen extends StatelessWidget {
 
   const PaymentScreen({
     super.key,
+    this.salonId = '',
     required this.salonName,
     required this.salonLocation,
     required this.selectedDate,
@@ -245,11 +247,11 @@ class PaymentScreen extends StatelessWidget {
     );
   }
 
-  void _onPlaceOrder(
+  Future<void> _onPlaceOrder(
     BuildContext context,
     AddressController addressController,
     PaymentController payController,
-  ) {
+  ) async {
     final selectedAddr = addressController.selectedAddress.value;
     if (selectedAddr == null && addressController.addresses.isNotEmpty) {
       _showAddressSelectionBottomSheet(context, addressController);
@@ -257,39 +259,97 @@ class PaymentScreen extends StatelessWidget {
     }
 
     final serviceNames = services
-        .map((s) => s['name'] ?? s['title'] ?? 'Salon Service')
+        .map(
+          (s) => s['serviceName'] ?? s['name'] ?? s['title'] ?? 'Salon Service',
+        )
         .join(', ');
     final addressText = selectedAddr != null
         ? "${selectedAddr.type}: ${selectedAddr.houseNo.isNotEmpty ? '${selectedAddr.houseNo}, ' : ''}${selectedAddr.address.isNotEmpty ? selectedAddr.address : selectedAddr.locationName}"
         : "Standard Service Address";
 
     final finalTotal = payController.calculateFinalTotal(itemTotal);
+    final formattedDate = _formatDate(selectedDate);
 
-    // Add to BookingsController
-    if (Get.isRegistered<BookingsController>()) {
-      final bController = Get.find<BookingsController>();
-      bController.addBooking({
-        'salon': salonName,
-        'service': serviceNames,
-        'date': _formatDate(selectedDate),
-        'time': selectedTime,
-        'status': 'Confirmed',
-        'price': '₹${finalTotal.toStringAsFixed(2)}',
-      });
+    // Show loading state while saving to Firebase
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF05352F)),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Confirming Booking...",
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF05352F),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    // Save to Firestore via BookingsController immediately
+    final bController = Get.isRegistered<BookingsController>()
+        ? Get.find<BookingsController>()
+        : Get.put(BookingsController());
+
+    final success = await bController.addBooking(
+      salonId: salonId,
+      salonName: salonName,
+      date: formattedDate,
+      time: selectedTime,
+      services: services,
+      paymentMethod: payController.paymentMethodType,
+      bookingStatus: 'Pending',
+    );
+
+    // Dismiss loading dialog
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
     }
 
-    // Navigate to BookingSuccessScreen
-    Get.off(
-      () => BookingSuccessScreen(
-        salonName: salonName,
-        date: _formatDate(selectedDate),
-        time: selectedTime,
-        services: serviceNames,
-        totalAmount: finalTotal,
-        paymentMethod: payController.paymentMethodName,
-        address: addressText,
-      ),
-    );
+    if (success) {
+      // Navigate to BookingSuccessScreen on successful Firebase write
+      Get.off(
+        () => BookingSuccessScreen(
+          salonName: salonName,
+          date: formattedDate,
+          time: selectedTime,
+          services: serviceNames,
+          totalAmount: finalTotal,
+          paymentMethod: payController.paymentMethodName,
+          address: addressText,
+        ),
+      );
+    } else {
+      // Show error notification on failure
+      Get.snackbar(
+        'Booking Failed',
+        'Unable to process your booking right now. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+    }
   }
 
   @override
@@ -304,7 +364,7 @@ class PaymentScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F6),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF006478),
+        backgroundColor: const Color(0xFF05352F),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -402,7 +462,7 @@ class PaymentScreen extends StatelessWidget {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF77A7B0),
+                  backgroundColor: const Color(0xFF05352F),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
@@ -461,12 +521,12 @@ class PaymentScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF006478).withValues(alpha: 0.1),
+                  color: const Color(0xFF05352F).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.storefront_rounded,
-                  color: Color(0xFF006478),
+                  color: Color(0xFF05352F),
                   size: 22,
                 ),
               ),
@@ -566,7 +626,8 @@ class PaymentScreen extends StatelessWidget {
             )
           else
             ...services.map((service) {
-              final sName = service['name']?.toString() ??
+              final sName =
+                  service['name']?.toString() ??
                   service['title']?.toString() ??
                   'Service';
               final sDuration = service['duration']?.toString() ?? '';
@@ -646,7 +707,7 @@ class PaymentScreen extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.location_on_rounded,
-                    color: Color(0xFF006478),
+                    color: Color(0xFF05352F),
                     size: 22,
                   ),
                   const SizedBox(width: 8),
@@ -675,7 +736,7 @@ class PaymentScreen extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF006478),
+                    color: const Color(0xFF05352F),
                   ),
                 ),
               ),
@@ -742,12 +803,12 @@ class PaymentScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF006478).withValues(alpha: 0.1),
+                      color: const Color(0xFF05352F).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.home_outlined,
-                      color: Color(0xFF006478),
+                      color: Color(0xFF05352F),
                       size: 20,
                     ),
                   ),
@@ -776,7 +837,7 @@ class PaymentScreen extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(
-                                  0xFF006478,
+                                  0xFF05352F,
                                 ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -785,7 +846,7 @@ class PaymentScreen extends StatelessWidget {
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF006478),
+                                  color: const Color(0xFF05352F),
                                 ),
                               ),
                             ),
@@ -836,7 +897,7 @@ class PaymentScreen extends StatelessWidget {
             children: [
               const Icon(
                 Icons.local_offer_outlined,
-                color: Color(0xFF006478),
+                color: Color(0xFF05352F),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -945,7 +1006,7 @@ class PaymentScreen extends StatelessWidget {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: const BorderSide(
-                              color: Color(0xFF006478),
+                              color: Color(0xFF05352F),
                             ),
                           ),
                         ),
@@ -954,7 +1015,7 @@ class PaymentScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF006478),
+                        backgroundColor: const Color(0xFF05352F),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1070,7 +1131,7 @@ class PaymentScreen extends StatelessWidget {
             children: [
               const Icon(
                 Icons.credit_card_rounded,
-                color: Color(0xFF006478),
+                color: Color(0xFF05352F),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -1091,7 +1152,7 @@ class PaymentScreen extends StatelessWidget {
             subtitle: "Visa, Mastercard, RuPay and more",
             icon: Icons.credit_card_outlined,
             iconBg: const Color(0xFFE2F2EE),
-            iconColor: const Color(0xFF006478),
+            iconColor: const Color(0xFF05352F),
             payController: payController,
           ),
           const SizedBox(height: 12),
@@ -1107,7 +1168,7 @@ class PaymentScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _buildPaymentMethodOption(
             index: 2,
-            title: "Cash on Delivery",
+            title: "Cash",
             subtitle: "Pay after the service is completed",
             icon: Icons.payments_outlined,
             iconBg: const Color(0xFFDCFCE7),
@@ -1144,7 +1205,7 @@ class PaymentScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF006478)
+                  ? const Color(0xFF05352F)
                   : Colors.grey.shade200,
               width: isSelected ? 2.0 : 1.0,
             ),
@@ -1188,7 +1249,7 @@ class PaymentScreen extends StatelessWidget {
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off,
                 color: isSelected
-                    ? const Color(0xFF006478)
+                    ? const Color(0xFF05352F)
                     : Colors.grey.shade400,
                 size: 22,
               ),
@@ -1222,7 +1283,7 @@ class PaymentScreen extends StatelessWidget {
             children: [
               const Icon(
                 Icons.receipt_long_outlined,
-                color: Color(0xFF006478),
+                color: Color(0xFF05352F),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -1238,11 +1299,7 @@ class PaymentScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildSummaryRow("Item Total", "₹${itemTotal.toStringAsFixed(2)}"),
-          const SizedBox(height: 8),
-          _buildSummaryRow(
-            "Delivery Fee",
-            "₹${payController.deliveryFee.toStringAsFixed(2)}",
-          ),
+
           Obx(() {
             final discount = payController.discountAmount.value;
             if (discount > 0) {
@@ -1281,7 +1338,7 @@ class PaymentScreen extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF006478),
+                    color: const Color(0xFF05352F),
                   ),
                 );
               }),

@@ -11,10 +11,10 @@ class PaymentController extends GetxController {
   final RxDouble discountAmount = 0.0.obs;
   final RxnString couponError = RxnString();
 
-  final double deliveryFee = 40.0;
+  final double deliveryFee = 0.0;
 
   double calculateFinalTotal(double itemTotal) {
-    final calculated = itemTotal + deliveryFee - discountAmount.value;
+    final calculated = itemTotal - discountAmount.value;
     return calculated < 0 ? 0 : calculated;
   }
 
@@ -28,6 +28,19 @@ class PaymentController extends GetxController {
         return "Cash on Delivery";
       default:
         return "Card";
+    }
+  }
+
+  String get paymentMethodType {
+    switch (selectedPaymentMethod.value) {
+      case 0:
+        return "card";
+      case 1:
+        return "upi";
+      case 2:
+        return "cash";
+      default:
+        return "card";
     }
   }
 
