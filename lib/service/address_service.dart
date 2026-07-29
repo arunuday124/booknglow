@@ -48,6 +48,14 @@ class AddressService {
     return newRef.id;
   }
 
+  /// Updates an existing address document in Firestore.
+  static Future<void> updateAddress(String docId, SavedAddressModel model) async {
+    final col = _addressCol;
+    if (col == null) throw Exception('User not logged in');
+
+    await col.doc(docId).update(model.toMap());
+  }
+
   /// Marks one address as selected and unmarks all others (batch).
   static Future<void> selectAddress(String docId) async {
     final col = _addressCol;

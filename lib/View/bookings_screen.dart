@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import '../Controller/bookings_controller.dart';
 import 'rebook_date_time_screen.dart';
+import 'rating_review_bottom_sheet.dart';
 
 class BookingsScreen extends StatelessWidget {
   const BookingsScreen({super.key});
@@ -164,11 +165,13 @@ class UpcomingBookingsTab extends StatelessWidget {
                 itemCount: bookings.length,
                 itemBuilder: (context, index) {
                   final booking = bookings[index];
-                  final statusLower =
-                      (booking['status']?.toString() ?? '').toLowerCase().trim();
+                  final statusLower = (booking['status']?.toString() ?? '')
+                      .toLowerCase()
+                      .trim();
                   final isAccepted =
                       statusLower == 'accepted' || statusLower == 'confirmed';
-                  final String rawService = booking['service']?.toString() ?? '';
+                  final String rawService =
+                      booking['service']?.toString() ?? '';
                   final List<String> serviceList = rawService
                       .split(', ')
                       .where((String s) => s.trim().isNotEmpty)
@@ -203,7 +206,8 @@ class UpcomingBookingsTab extends StatelessWidget {
                                   children: [
                                     if (serviceList.isEmpty)
                                       Text(
-                                        booking['service']?.toString() ?? 'Salon Service',
+                                        booking['service']?.toString() ??
+                                            'Salon Service',
                                         style: GoogleFonts.playfairDisplay(
                                           textStyle: const TextStyle(
                                             fontSize: 18,
@@ -226,25 +230,30 @@ class UpcomingBookingsTab extends StatelessWidget {
                                                 "• ",
                                                 style:
                                                     GoogleFonts.plusJakartaSans(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: const Color(
-                                                    0xFF05352F,
-                                                  ),
-                                                ),
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: const Color(
+                                                        0xFF05352F,
+                                                      ),
+                                                    ),
                                               ),
                                               Expanded(
                                                 child: Text(
                                                   serviceName.trim(),
                                                   style:
                                                       GoogleFonts.playfairDisplay(
-                                                    textStyle: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Color(0xFF05352F),
-                                                    ),
-                                                  ),
+                                                        textStyle:
+                                                            const TextStyle(
+                                                              fontSize: 18,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Color(
+                                                                0xFF05352F,
+                                                              ),
+                                                            ),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -441,11 +450,13 @@ class HistoryBookingsTab extends StatelessWidget {
                 itemCount: bookings.length,
                 itemBuilder: (context, index) {
                   final booking = bookings[index];
-                  final statusLower =
-                      (booking['status']?.toString() ?? '').toLowerCase().trim();
+                  final statusLower = (booking['status']?.toString() ?? '')
+                      .toLowerCase()
+                      .trim();
                   final isCanceled =
                       statusLower == 'canceled' || statusLower == 'cancelled';
-                  final String rawService = booking['service']?.toString() ?? '';
+                  final String rawService =
+                      booking['service']?.toString() ?? '';
                   final List<String> serviceList = rawService
                       .split(', ')
                       .where((String s) => s.trim().isNotEmpty)
@@ -479,7 +490,8 @@ class HistoryBookingsTab extends StatelessWidget {
                                   children: [
                                     if (serviceList.isEmpty)
                                       Text(
-                                        booking['service']?.toString() ?? 'Salon Service',
+                                        booking['service']?.toString() ??
+                                            'Salon Service',
                                         style: GoogleFonts.playfairDisplay(
                                           textStyle: const TextStyle(
                                             fontSize: 16,
@@ -502,41 +514,111 @@ class HistoryBookingsTab extends StatelessWidget {
                                                 "• ",
                                                 style:
                                                     GoogleFonts.plusJakartaSans(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: const Color(
-                                                    0xFF05352F,
-                                                  ),
-                                                ),
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: const Color(
+                                                        0xFF05352F,
+                                                      ),
+                                                    ),
                                               ),
                                               Expanded(
                                                 child: Text(
                                                   serviceName.trim(),
                                                   style:
                                                       GoogleFonts.playfairDisplay(
-                                                    textStyle: const TextStyle(
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Color(0xFF05352F),
-                                                    ),
-                                                  ),
+                                                        textStyle:
+                                                            const TextStyle(
+                                                              fontSize: 15,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Color(
+                                                                0xFF05352F,
+                                                              ),
+                                                            ),
+                                                      ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         );
                                       }),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      booking['salon']!,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        textStyle: const TextStyle(
-                                          fontSize: 13,
-                                          color: Color(0xFF2C3E3A),
-                                          fontWeight: FontWeight.bold,
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            booking['salon']!,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              textStyle: const TextStyle(
+                                                fontSize: 13,
+                                                color: Color(0xFF2C3E3A),
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        InkWell(
+                                          onTap: () {
+                                            RatingReviewBottomSheet.show(
+                                              context,
+                                              salonId:
+                                                  booking['salonId']
+                                                      ?.toString() ??
+                                                  '',
+                                              salonName:
+                                                  booking['salon']
+                                                      ?.toString() ??
+                                                  'Salon',
+                                              serviceName:
+                                                  booking['service']
+                                                      ?.toString() ??
+                                                  'Salon Service',
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFFBEB),
+                                              border: Border.all(
+                                                color: const Color(0xFFFDE68A),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.star_rounded,
+                                                  size: 15,
+                                                  color: Color(0xFFD97706),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  "Rate",
+                                                  style:
+                                                      GoogleFonts.plusJakartaSans(
+                                                        fontSize: 11.5,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: const Color(
+                                                          0xFF92400E,
+                                                        ),
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -644,21 +726,26 @@ class HistoryBookingsTab extends StatelessWidget {
                                 onPressed: () {
                                   List<Map<String, dynamic>> services = [];
                                   if (booking['services'] is List &&
-                                      (booking['services'] as List).isNotEmpty) {
+                                      (booking['services'] as List)
+                                          .isNotEmpty) {
                                     services = (booking['services'] as List)
-                                        .map((s) => s is Map
-                                            ? Map<String, dynamic>.from(s)
-                                            : <String, dynamic>{})
+                                        .map(
+                                          (s) => s is Map
+                                              ? Map<String, dynamic>.from(s)
+                                              : <String, dynamic>{},
+                                        )
                                         .where((s) => s.isNotEmpty)
                                         .toList();
                                   }
 
                                   if (services.isEmpty) {
                                     final String rawServiceName =
-                                        (booking['service']?.toString().isNotEmpty ==
-                                                true)
-                                            ? booking['service'].toString()
-                                            : 'Salon Service';
+                                        (booking['service']
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true)
+                                        ? booking['service'].toString()
+                                        : 'Salon Service';
                                     final names = rawServiceName
                                         .split(', ')
                                         .where((n) => n.trim().isNotEmpty)
@@ -673,20 +760,25 @@ class HistoryBookingsTab extends StatelessWidget {
                                         ? totalPrice / names.length
                                         : totalPrice;
 
-                                    services = (names.isNotEmpty ? names : [rawServiceName])
-                                        .map((n) => <String, dynamic>{
-                                              'serviceName': n.trim(),
-                                              'name': n.trim(),
-                                              'price': pricePerService,
-                                              'duration': '30 mins',
-                                            })
-                                        .toList();
+                                    services =
+                                        (names.isNotEmpty
+                                                ? names
+                                                : [rawServiceName])
+                                            .map(
+                                              (n) => <String, dynamic>{
+                                                'serviceName': n.trim(),
+                                                'name': n.trim(),
+                                                'price': pricePerService,
+                                                'duration': '30 mins',
+                                              },
+                                            )
+                                            .toList();
                                   }
 
                                   double itemTotal = 0.0;
                                   if (booking['rawPrice'] is num) {
-                                    itemTotal =
-                                        (booking['rawPrice'] as num).toDouble();
+                                    itemTotal = (booking['rawPrice'] as num)
+                                        .toDouble();
                                   } else if (booking['price'] != null) {
                                     final cleaned = booking['price']
                                         .toString()
@@ -705,10 +797,12 @@ class HistoryBookingsTab extends StatelessWidget {
                                       salonId:
                                           booking['salonId']?.toString() ?? '',
                                       salonName:
-                                          booking['salon']?.toString() ?? 'Salon',
+                                          booking['salon']?.toString() ??
+                                          'Salon',
                                       salonLocation:
-                                          booking['salonLocation']?.toString() ??
-                                              '',
+                                          booking['salonLocation']
+                                              ?.toString() ??
+                                          '',
                                       services: services,
                                       itemTotal: itemTotal,
                                       originalDate: originalDate,

@@ -3,58 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Controller/address_controller.dart';
+import '../Controller/select_location_controller.dart';
 import '../model/saved_address_model.dart';
-import '../service/location_service.dart';
 import 'add_address_screen.dart';
 
-class SelectLocationScreen extends StatefulWidget {
+class SelectLocationScreen extends StatelessWidget {
   const SelectLocationScreen({super.key});
 
-  @override
-  State<SelectLocationScreen> createState() => _SelectLocationScreenState();
-}
-
-class _SelectLocationScreenState extends State<SelectLocationScreen> {
   static const _green = Color(0xFF05352F);
   static const _bg = Color(0xFFFAF9F5);
   static const _textMuted = Color(0xFF7A8D87);
 
-  bool _isFetchingLocation = false;
-
-  Future<void> _handleGetCurrentLocation() async {
-    setState(() => _isFetchingLocation = true);
-    try {
-      final result = await LocationService.getCurrentLocation();
-      if (!mounted) return;
-
-      Get.to(
-        () => AddAddressScreen(
-          locationName: result.locationName,
-          locationAddress: result.locationAddress,
-          location: GeoPoint(result.latitude, result.longitude),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Get.snackbar(
-        'Location Access',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade800,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 8,
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isFetchingLocation = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AddressController>();
+    final addressController = Get.find<AddressController>();
+    final locationController = Get.put(SelectLocationController());
 
     return Scaffold(
       backgroundColor: _bg,
@@ -124,13 +87,15 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _ActionButton(
-                  icon: Icons.my_location,
-                  label: 'Use Current\nLocation',
-                  isLoading: _isFetchingLocation,
-                  onTap: _isFetchingLocation
-                      ? () {}
-                      : () => _handleGetCurrentLocation(),
+                Obx(
+                  () => _ActionButton(
+                    icon: Icons.my_location,
+                    label: 'Use Current\nLocation',
+                    isLoading: locationController.isFetchingLocation.value,
+                    onTap: locationController.isFetchingLocation.value
+                        ? () {}
+                        : () => locationController.handleGetCurrentLocation(),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 _ActionButton(
@@ -185,7 +150,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
           // ── Address List ────────────────────────────────────────────
           Expanded(
             child: Obx(() {
-              final addresses = controller.addresses;
+              final addresses = addressController.addresses;
 
               if (addresses.isEmpty) {
                 return Center(
@@ -226,13 +191,12 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                   final addr = addresses[index];
                   return _AddressCard(
                     address: addr,
-                    onSelect: () async {
-                      await controller.selectAddress(addr.id!);
-                      Get.back();
-                    },
-                    onToggleFavorite: () =>
-                        controller.toggleFavorite(addr.id!, addr.isFavorite),
-                    onDelete: () => controller.deleteAddress(addr.id!),
+                    onSelect: () => addressController.selectAddress(addr.id!),
+                    onToggleFavorite: () => addressController.toggleFavorite(
+                      addr.id!,
+                      addr.isFavorite,
+                    ),
+                    onDelete: () => addressController.deleteAddress(addr.id!),
                   );
                 },
               );
@@ -447,7 +411,9 @@ class _AddressCard extends StatelessWidget {
                 GestureDetector(
                   onTap: onToggleFavorite,
                   child: Icon(
-                    address.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    address.isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
                     color: address.isFavorite ? Colors.redAccent : _textMuted,
                     size: 20,
                   ),
@@ -481,6 +447,34 @@ class _AddressCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: _green,
+              ),
+              title: Text(
+                'Edit Address',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: _green,
+                ),
+              ),
+              onTap: () {
+                Get.back();
+                Get.to(
+                  () => AddAddressScreen(
+                    locationName: address.locationName.isNotEmpty
+                        ? address.locationName
+                        : 'My Location',
+                    locationAddress: address.address,
+                    location: address.location,
+                    existingAddress: address,
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(
                 Icons.delete_outline,
