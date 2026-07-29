@@ -52,7 +52,10 @@ class BookingSuccessScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFFAF9F5),
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
             child: Column(
               children: [
                 const Spacer(flex: 1),
@@ -60,12 +63,8 @@ class BookingSuccessScreen extends StatelessWidget {
                 // Lottie Success Animation in a loop
                 Center(
                   child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF05352F).withOpacity(0.04),
-                      shape: BoxShape.circle,
-                    ),
+                    width: 250,
+                    height: 250,
                     child: Lottie.asset(
                       'assets/videos/success.json',
                       width: 180,
@@ -159,7 +158,8 @@ class BookingSuccessScreen extends StatelessWidget {
                       _buildDetailRow(
                         icon: Icons.payment_rounded,
                         label: "Payment",
-                        value: "$paymentMethod (₹${totalAmount.toStringAsFixed(2)})",
+                        value:
+                            "$paymentMethod (₹${totalAmount.toStringAsFixed(2)})",
                         valueColor: const Color(0xFF9E7E45),
                         isBold: true,
                       ),

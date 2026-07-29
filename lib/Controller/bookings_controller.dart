@@ -7,10 +7,10 @@ class BookingsController extends GetxController {
   final RxInt selectedTab = 0.obs;
 
   // Dynamic upcoming and history bookings lists
-  final RxList<Map<String, String>> upcomingBookings =
-      <Map<String, String>>[].obs;
-  final RxList<Map<String, String>> historyBookings =
-      <Map<String, String>>[].obs;
+  final RxList<Map<String, dynamic>> upcomingBookings =
+      <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> historyBookings =
+      <Map<String, dynamic>>[].obs;
   final RxBool isLoading = false.obs;
 
   @override
@@ -26,21 +26,17 @@ class BookingsController extends GetxController {
     isLoading.value = true;
     try {
       final list = await BookingService.getUserBookings();
-      final List<Map<String, String>> upcoming = [];
-      final List<Map<String, String>> history = [];
+      final List<Map<String, dynamic>> upcoming = [];
+      final List<Map<String, dynamic>> history = [];
 
       for (var doc in list) {
         final servicesList = (doc['services'] as List<dynamic>?) ?? [];
-        final serviceNames = servicesList
-            .map((s) {
-              if (s is Map) {
-                return s['serviceName']?.toString() ??
-                    s['name']?.toString() ??
-                    'Service';
-              }
-              return 'Service';
-            })
-            .join(', ');
+        final List<Map<String, dynamic>> parsedServices = [];
+        for (var s in servicesList) {
+          if (s is Map) {
+            parsedServices.add(Map<String, dynamic>.from(s));
+          }
+        }
 
         num totalPrice = 0;
         for (var s in servicesList) {
@@ -54,10 +50,36 @@ class BookingsController extends GetxController {
           }
         }
 
-        final formattedMap = <String, String>{
+        if (parsedServices.isEmpty) {
+          final fallbackName = doc['serviceName']?.toString() ??
+              doc['service']?.toString() ??
+              doc['name']?.toString() ??
+              'Salon Service';
+          final fallbackPrice = totalPrice > 0 ? totalPrice : 0;
+          parsedServices.add({
+            'serviceName': fallbackName,
+            'name': fallbackName,
+            'price': fallbackPrice,
+            'duration': '30 mins',
+          });
+        }
+
+        final serviceNames = parsedServices
+            .map((s) =>
+                s['serviceName']?.toString() ??
+                s['name']?.toString() ??
+                s['title']?.toString() ??
+                'Service')
+            .join(', ');
+
+        final formattedMap = <String, dynamic>{
           'id': doc['id']?.toString() ?? '',
+          'salonId': doc['salonId']?.toString() ?? '',
           'salon': doc['salonName']?.toString() ?? 'Salon',
+          'salonLocation': doc['salonLocation']?.toString() ?? '',
           'service': serviceNames.isNotEmpty ? serviceNames : 'Salon Service',
+          'services': parsedServices,
+          'rawPrice': totalPrice.toDouble(),
           'date': doc['date']?.toString() ?? '',
           'time': doc['time']?.toString() ?? '',
           'status': doc['bookingStatus']?.toString() ?? 'Pending',
@@ -134,8 +156,12 @@ class BookingsController extends GetxController {
       // 2. On success, update local UI state in memory without re-fetching
       upcomingBookings.insert(0, {
         'id': docId ?? '',
+        'salonId': salonId,
         'salon': salonName,
+        'salonLocation': '',
         'service': serviceNames.isNotEmpty ? serviceNames : 'Salon Service',
+        'services': services,
+        'rawPrice': totalPrice.toDouble(),
         'date': date,
         'time': time,
         'status': bookingStatus,

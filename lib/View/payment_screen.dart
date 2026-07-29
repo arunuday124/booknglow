@@ -627,9 +627,11 @@ class PaymentScreen extends StatelessWidget {
           else
             ...services.map((service) {
               final sName =
+                  service['serviceName']?.toString() ??
                   service['name']?.toString() ??
                   service['title']?.toString() ??
-                  'Service';
+                  service['service']?.toString() ??
+                  'Salon Service';
               final sDuration = service['duration']?.toString() ?? '';
               final sPrice = service['price']?.toString() ?? '0';
 

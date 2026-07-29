@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import '../Controller/bookings_controller.dart';
+import 'rebook_date_time_screen.dart';
 
 class BookingsScreen extends StatelessWidget {
   const BookingsScreen({super.key});
@@ -164,12 +165,13 @@ class UpcomingBookingsTab extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final booking = bookings[index];
                   final statusLower =
-                      (booking['status'] ?? '').toLowerCase().trim();
+                      (booking['status']?.toString() ?? '').toLowerCase().trim();
                   final isAccepted =
                       statusLower == 'accepted' || statusLower == 'confirmed';
-                  final serviceList = (booking['service'] ?? '')
+                  final String rawService = booking['service']?.toString() ?? '';
+                  final List<String> serviceList = rawService
                       .split(', ')
-                      .where((s) => s.trim().isNotEmpty)
+                      .where((String s) => s.trim().isNotEmpty)
                       .toList();
 
                   return Container(
@@ -201,7 +203,7 @@ class UpcomingBookingsTab extends StatelessWidget {
                                   children: [
                                     if (serviceList.isEmpty)
                                       Text(
-                                        booking['service'] ?? 'Salon Service',
+                                        booking['service']?.toString() ?? 'Salon Service',
                                         style: GoogleFonts.playfairDisplay(
                                           textStyle: const TextStyle(
                                             fontSize: 18,
@@ -310,7 +312,7 @@ class UpcomingBookingsTab extends StatelessWidget {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        booking['date']!,
+                                        booking['date']?.toString() ?? '',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.plusJakartaSans(
@@ -334,7 +336,7 @@ class UpcomingBookingsTab extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    booking['time']!,
+                                    booking['time']?.toString() ?? '',
                                     style: GoogleFonts.plusJakartaSans(
                                       textStyle: const TextStyle(
                                         fontSize: 12.5,
@@ -356,7 +358,7 @@ class UpcomingBookingsTab extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                booking['price']!,
+                                booking['price']?.toString() ?? '',
                                 style: GoogleFonts.plusJakartaSans(
                                   textStyle: const TextStyle(
                                     fontSize: 15,
@@ -440,12 +442,13 @@ class HistoryBookingsTab extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final booking = bookings[index];
                   final statusLower =
-                      (booking['status'] ?? '').toLowerCase().trim();
+                      (booking['status']?.toString() ?? '').toLowerCase().trim();
                   final isCanceled =
                       statusLower == 'canceled' || statusLower == 'cancelled';
-                  final serviceList = (booking['service'] ?? '')
+                  final String rawService = booking['service']?.toString() ?? '';
+                  final List<String> serviceList = rawService
                       .split(', ')
-                      .where((s) => s.trim().isNotEmpty)
+                      .where((String s) => s.trim().isNotEmpty)
                       .toList();
 
                   return Container(
@@ -476,7 +479,7 @@ class HistoryBookingsTab extends StatelessWidget {
                                   children: [
                                     if (serviceList.isEmpty)
                                       Text(
-                                        booking['service'] ?? 'Salon Service',
+                                        booking['service']?.toString() ?? 'Salon Service',
                                         style: GoogleFonts.playfairDisplay(
                                           textStyle: const TextStyle(
                                             fontSize: 16,
@@ -628,7 +631,7 @@ class HistoryBookingsTab extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                booking['price']!,
+                                booking['price']?.toString() ?? '',
                                 style: GoogleFonts.plusJakartaSans(
                                   textStyle: const TextStyle(
                                     fontSize: 15,
@@ -638,7 +641,81 @@ class HistoryBookingsTab extends StatelessWidget {
                                 ),
                               ),
                               ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  List<Map<String, dynamic>> services = [];
+                                  if (booking['services'] is List &&
+                                      (booking['services'] as List).isNotEmpty) {
+                                    services = (booking['services'] as List)
+                                        .map((s) => s is Map
+                                            ? Map<String, dynamic>.from(s)
+                                            : <String, dynamic>{})
+                                        .where((s) => s.isNotEmpty)
+                                        .toList();
+                                  }
+
+                                  if (services.isEmpty) {
+                                    final String rawServiceName =
+                                        (booking['service']?.toString().isNotEmpty ==
+                                                true)
+                                            ? booking['service'].toString()
+                                            : 'Salon Service';
+                                    final names = rawServiceName
+                                        .split(', ')
+                                        .where((n) => n.trim().isNotEmpty)
+                                        .toList();
+                                    final priceStr =
+                                        (booking['price']?.toString() ?? '')
+                                            .replaceAll('₹', '')
+                                            .trim();
+                                    final totalPrice =
+                                        double.tryParse(priceStr) ?? 0.0;
+                                    final pricePerService = names.isNotEmpty
+                                        ? totalPrice / names.length
+                                        : totalPrice;
+
+                                    services = (names.isNotEmpty ? names : [rawServiceName])
+                                        .map((n) => <String, dynamic>{
+                                              'serviceName': n.trim(),
+                                              'name': n.trim(),
+                                              'price': pricePerService,
+                                              'duration': '30 mins',
+                                            })
+                                        .toList();
+                                  }
+
+                                  double itemTotal = 0.0;
+                                  if (booking['rawPrice'] is num) {
+                                    itemTotal =
+                                        (booking['rawPrice'] as num).toDouble();
+                                  } else if (booking['price'] != null) {
+                                    final cleaned = booking['price']
+                                        .toString()
+                                        .replaceAll('₹', '')
+                                        .trim();
+                                    itemTotal = double.tryParse(cleaned) ?? 0.0;
+                                  }
+
+                                  final originalDate =
+                                      booking['date']?.toString() ?? '';
+                                  final originalTime =
+                                      booking['time']?.toString() ?? '';
+
+                                  Get.to(
+                                    () => RebookDateTimeScreen(
+                                      salonId:
+                                          booking['salonId']?.toString() ?? '',
+                                      salonName:
+                                          booking['salon']?.toString() ?? 'Salon',
+                                      salonLocation:
+                                          booking['salonLocation']?.toString() ??
+                                              '',
+                                      services: services,
+                                      itemTotal: itemTotal,
+                                      originalDate: originalDate,
+                                      originalTime: originalTime,
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: const Color(0xFF05352F),
