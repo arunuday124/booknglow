@@ -411,16 +411,6 @@ class AllSalonsScreen extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        Text(
-                                          r'₹₹',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            textStyle: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF9E7E45),
-                                            ),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 6),

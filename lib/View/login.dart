@@ -381,7 +381,18 @@ class Login extends StatelessWidget {
                           // Apple login button
                           Expanded(
                             child: InkWell(
-                              onTap: controller.loginWithApple,
+                              onTap: () {
+                                Get.snackbar(
+                                  'Coming Soon',
+                                  'Apple Sign-In is coming soon!',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: const Color(0xFF05352F),
+                                  colorText: Colors.white,
+                                  margin: const EdgeInsets.all(16),
+                                  borderRadius: 12,
+                                  duration: const Duration(seconds: 2),
+                                );
+                              },
                               borderRadius: BorderRadius.circular(8.0),
                               child: Container(
                                 height: 50,

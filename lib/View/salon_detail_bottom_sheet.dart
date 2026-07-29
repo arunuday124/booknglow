@@ -19,7 +19,11 @@ class SalonDetailBottomSheet extends StatelessWidget {
     // Inject the controller unique to this salon instance
     final controller = Get.put(
       SalonDetailController(salonData),
-      tag: salonData['name'] ?? 'default_salon',
+      tag:
+          salonData['salonId']?.toString() ??
+          salonData['id']?.toString() ??
+          salonData['name']?.toString() ??
+          'default_salon',
     );
 
     // Parse rating and reviews count safely
@@ -37,9 +41,6 @@ class SalonDetailBottomSheet extends StatelessWidget {
 
     final String name = salonData['name'] ?? 'Luxury Salon';
     final String location = salonData['location'] ?? 'Downtown';
-    final String priceTier = (salonData['price']?.toString().isEmpty ?? true)
-        ? r'₹₹'
-        : salonData['price'] as String;
 
     final String openingHours =
         salonData['openingHours']?.toString() ?? '10 AM';
@@ -202,26 +203,6 @@ class SalonDetailBottomSheet extends StatelessWidget {
                               textStyle: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF7A8D87),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF7A8D87),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            priceTier,
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF9E7E45),
                               ),
                             ),
                           ),
@@ -454,56 +435,98 @@ class SalonDetailBottomSheet extends StatelessWidget {
                             return Obx(() {
                               final isSelected =
                                   controller.selectedTime.value == timeSlot;
+                              final isLocked = controller.isSlotLocked(
+                                timeSlot,
+                              );
 
                               return GestureDetector(
-                                onTap: () => controller.selectTime(timeSlot),
+                                onTap: isLocked
+                                    ? () {
+                                        Get.snackbar(
+                                          'Slot Locked',
+                                          'This time slot ($timeSlot) is already booked and locked.',
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: const Color.fromARGB(
+                                            255,
+                                            219,
+                                            62,
+                                            5,
+                                          ),
+                                          colorText: Colors.white,
+                                          margin: const EdgeInsets.all(16),
+                                          borderRadius: 12,
+                                          duration: const Duration(seconds: 2),
+                                        );
+                                      }
+                                    : () => controller.selectTime(timeSlot),
                                 child: Container(
                                   margin: const EdgeInsets.only(right: 12),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
+                                    horizontal: 16,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isSelected
+                                    color: isLocked
+                                        ? const Color(0xFFEFECE6)
+                                        : isSelected
                                         ? const Color(0xFF05352F)
                                         : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: isSelected
+                                      color: isLocked
+                                          ? const Color(0xFFD6CFC4)
+                                          : isSelected
                                           ? const Color(0xFF05352F)
                                           : const Color(
                                               0xFFE8D5AF,
-                                            ).withOpacity(0.3),
+                                            ).withValues(alpha: 0.3),
                                       width: 1,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isSelected
-                                            ? const Color(
-                                                0xFF05352F,
-                                              ).withOpacity(0.15)
-                                            : const Color.fromRGBO(
-                                                0,
-                                                0,
-                                                0,
-                                                0.02,
-                                              ),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
+                                    boxShadow: isLocked
+                                        ? []
+                                        : [
+                                            BoxShadow(
+                                              color: isSelected
+                                                  ? const Color(
+                                                      0xFF05352F,
+                                                    ).withValues(alpha: 0.15)
+                                                  : const Color.fromRGBO(
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0.02,
+                                                    ),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
                                   ),
                                   alignment: Alignment.center,
-                                  child: Text(
-                                    timeSlot,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      textStyle: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF05352F),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isLocked) ...[
+                                        const Icon(
+                                          Icons.lock_rounded,
+                                          size: 14,
+                                          color: Color(0xFF9E9588),
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Text(
+                                        timeSlot,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          textStyle: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: isLocked
+                                                ? const Color(0xFF9E9588)
+                                                : isSelected
+                                                ? Colors.white
+                                                : const Color(0xFF05352F),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               );

@@ -124,7 +124,7 @@ class SalonModel {
       'reviews': '$reviews reviews',
       'shopImage': shopImage,
       'image': shopImage,
-      'price': r'₹₹',
+      'price': '',
       'isOpen': true,
       'services': services.map((s) => s.toMap()).toList(),
     };

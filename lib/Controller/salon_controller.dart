@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../model/salon_model.dart';
@@ -105,25 +107,28 @@ class SalonDetailController extends GetxController {
 
   // Available lists
   final List<DateTime> availableDates = [];
-  final List<String> availableTimes = [
-    "09:30 AM",
-    "11:30 AM",
-    "02:00 PM",
-    "04:30 PM",
-    "06:30 PM"
-  ];
+  final List<String> availableTimes = [];
   List<Map<String, dynamic>> availableServices = [];
 
   // Observables
   final Rx<DateTime?> selectedDate = Rx<DateTime?>(null);
   final RxString selectedTime = ''.obs;
   final RxSet<String> selectedServices = <String>{}.obs;
+  final RxSet<String> lockedTimeSlots = <String>{}.obs;
+
+  StreamSubscription? _bookingsSubscription;
+  List<Map<String, dynamic>> _salonBookingsDocs = [];
 
   @override
   void onInit() {
     super.onInit();
     _generateDates();
+    _generateTimes();
     _generateServices();
+    _listenToBookedSlots();
+
+    // Re-evaluate locked slots whenever selectedDate changes
+    ever(selectedDate, (_) => _reevaluateLockedSlots());
   }
 
   void _generateDates() {
@@ -131,6 +136,78 @@ class SalonDetailController extends GetxController {
     for (int i = 0; i < 7; i++) {
       availableDates.add(today.add(Duration(days: i)));
     }
+  }
+
+  void _generateTimes() {
+    availableTimes.clear();
+
+    String openStr = (salonData['openingHours'] ??
+            salonData['opening_hours'] ??
+            salonData['openingTime'] ??
+            '9 AM')
+        .toString()
+        .trim();
+    String closeStr = (salonData['closingHours'] ??
+            salonData['closing_hours'] ??
+            salonData['closingTime'] ??
+            '10 PM')
+        .toString()
+        .trim();
+
+    if (openStr.contains('-') &&
+        (closeStr.isEmpty || closeStr == openStr || closeStr == '10 PM')) {
+      final parts = openStr.split('-');
+      openStr = parts[0].trim();
+      closeStr = parts[1].trim();
+    }
+
+    final openMinutes = _parseToMinutes(openStr) ?? (9 * 60);
+    final closeMinutes = _parseToMinutes(closeStr) ?? (22 * 60);
+
+    int start = openMinutes;
+    int end = closeMinutes;
+
+    if (end <= start) {
+      end += 24 * 60;
+    }
+
+    for (int current = start; current <= end; current += 30) {
+      final totalMins = current % (24 * 60);
+      final hour = totalMins ~/ 60;
+      final min = totalMins % 60;
+
+      final period = hour >= 12 ? 'PM' : 'AM';
+      int displayHour = hour % 12;
+      if (displayHour == 0) displayHour = 12;
+
+      final formattedHour = displayHour.toString().padLeft(2, '0');
+      final formattedMin = min.toString().padLeft(2, '0');
+
+      availableTimes.add('$formattedHour:$formattedMin $period');
+    }
+  }
+
+  int? _parseToMinutes(String timeStr) {
+    if (timeStr.isEmpty) return null;
+
+    final upper = timeStr.toUpperCase();
+    final isPM = upper.contains('PM');
+    final isAM = upper.contains('AM');
+
+    final cleanStr = upper.replaceAll(RegExp(r'[^0-9:]'), '').trim();
+    if (cleanStr.isEmpty) return null;
+
+    final parts = cleanStr.split(':');
+    int hour = int.tryParse(parts[0]) ?? 0;
+    int minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+
+    if (isPM && hour < 12) {
+      hour += 12;
+    } else if (isAM && hour == 12) {
+      hour = 0;
+    }
+
+    return hour * 60 + minute;
   }
 
   void _generateServices() {
@@ -249,11 +326,130 @@ class SalonDetailController extends GetxController {
     }
   }
 
+  void _listenToBookedSlots() {
+    final salonId = (salonData['salonId'] ??
+            salonData['id'] ??
+            salonData['name'] ??
+            '')
+        .toString();
+    if (salonId.isEmpty) return;
+
+    _bookingsSubscription?.cancel();
+    _bookingsSubscription = FirebaseFirestore.instance
+        .collection('bookings')
+        .where('salonId', isEqualTo: salonId)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        _salonBookingsDocs = snapshot.docs.map((d) => d.data()).toList();
+        _reevaluateLockedSlots();
+      },
+      onError: (e) {
+        debugPrint('❌ [SalonDetailController] Error listening to bookings: $e');
+      },
+    );
+  }
+
+  void _reevaluateLockedSlots() {
+    lockedTimeSlots.clear();
+    final date = selectedDate.value;
+    if (date == null || _salonBookingsDocs.isEmpty) return;
+
+    for (var doc in _salonBookingsDocs) {
+      final status = (doc['bookingStatus']?.toString() ?? '').toLowerCase().trim();
+      // Lock slot ONLY if bookingStatus is "Confirmed"
+      if (status != 'confirmed') {
+        continue;
+      }
+
+      final docDateRaw = doc['date']?.toString() ?? '';
+      final docTimeRaw = doc['time']?.toString() ?? '';
+
+      if (_isSameDate(docDateRaw, date)) {
+        final normalizedDocTime = _normalizeTime(docTimeRaw);
+        if (normalizedDocTime != null) {
+          for (var slot in availableTimes) {
+            if (_normalizeTime(slot) == normalizedDocTime) {
+              lockedTimeSlots.add(slot);
+            }
+          }
+        }
+      }
+    }
+
+    // If currently selected time is now locked, clear selection
+    if (selectedTime.isNotEmpty && lockedTimeSlots.contains(selectedTime.value)) {
+      selectedTime.value = '';
+    }
+  }
+
+  bool isSlotLocked(String timeSlot) {
+    return lockedTimeSlots.contains(timeSlot);
+  }
+
+  bool _isSameDate(String docDateRaw, DateTime target) {
+    if (docDateRaw.isEmpty) return false;
+    final docLower = docDateRaw.toLowerCase().trim();
+
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final formatted1 =
+        "${days[target.weekday - 1]}, ${months[target.month - 1]} ${target.day}, ${target.year}"
+            .toLowerCase();
+
+    if (docLower == formatted1) return true;
+
+    final formatted2 =
+        "${target.year}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}"
+            .toLowerCase();
+    if (docLower == formatted2) return true;
+
+    final parsed = DateTime.tryParse(docDateRaw);
+    if (parsed != null) {
+      return parsed.year == target.year &&
+          parsed.month == target.month &&
+          parsed.day == target.day;
+    }
+
+    final monthStr = months[target.month - 1].toLowerCase();
+    final dayStr = target.day.toString();
+    final yearStr = target.year.toString();
+    if (docLower.contains(monthStr) &&
+        docLower.contains(dayStr) &&
+        docLower.contains(yearStr)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String? _normalizeTime(String timeStr) {
+    final mins = _parseToMinutes(timeStr);
+    if (mins == null) return null;
+
+    final totalMins = mins % (24 * 60);
+    final hour = totalMins ~/ 60;
+    final min = totalMins % 60;
+
+    final period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour % 12;
+    if (displayHour == 0) displayHour = 12;
+
+    final formattedHour = displayHour.toString().padLeft(2, '0');
+    final formattedMin = min.toString().padLeft(2, '0');
+
+    return '$formattedHour:$formattedMin $period';
+  }
+
   void selectDate(DateTime date) {
     selectedDate.value = date;
   }
 
   void selectTime(String timeSlot) {
+    if (isSlotLocked(timeSlot)) return;
     selectedTime.value = timeSlot;
   }
 
@@ -267,5 +463,11 @@ class SalonDetailController extends GetxController {
     selectedDate.value = null;
     selectedTime.value = '';
     selectedServices.clear();
+  }
+
+  @override
+  void onClose() {
+    _bookingsSubscription?.cancel();
+    super.onClose();
   }
 }

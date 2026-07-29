@@ -552,13 +552,15 @@ class HomeScreen extends StatelessWidget {
                                         width: 100,
                                         height: 100,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => const Center(
-                                          child: Icon(
-                                            Icons.spa_outlined,
-                                            color: Color(0xFF05352F),
-                                            size: 30,
-                                          ),
-                                        ),
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Center(
+                                                  child: Icon(
+                                                    Icons.spa_outlined,
+                                                    color: Color(0xFF05352F),
+                                                    size: 30,
+                                                  ),
+                                                ),
                                       )
                                     : const Center(
                                         child: Icon(
@@ -572,7 +574,8 @@ class HomeScreen extends StatelessWidget {
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         mainAxisAlignment:
@@ -583,23 +586,15 @@ class HomeScreen extends StatelessWidget {
                                               salonModel.salonName,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.playfairDisplay(
-                                                textStyle: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF05352F),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            r'₹₹',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              textStyle: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF9E7E45),
-                                              ),
+                                              style:
+                                                  GoogleFonts.playfairDisplay(
+                                                    textStyle: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF05352F),
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ],
@@ -641,12 +636,13 @@ class HomeScreen extends StatelessWidget {
                                                   : 'Location unavailable',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.plusJakartaSans(
-                                                textStyle: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Color(0xFF7A8D87),
-                                                ),
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    textStyle: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: Color(0xFF7A8D87),
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ],
