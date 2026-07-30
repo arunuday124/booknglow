@@ -6,6 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../Controller/personal_info_controller.dart';
 import 'login.dart';
 import 'personal_info.dart';
+import 'payment_methods_screen.dart';
+import 'privacy_security_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -298,7 +301,11 @@ class ProfileScreen extends StatelessWidget {
                     _buildOption(
                       icon: Icons.payment_outlined,
                       title: "Payment Methods",
-                      onTap: () {},
+                      onTap: () => Get.to(
+                        () => const PaymentMethodsScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                     // const Divider(height: 1, color: Color(0xFFFAF9F5)),
                     // _buildOption(
@@ -314,13 +321,21 @@ class ProfileScreen extends StatelessWidget {
                     _buildOption(
                       icon: Icons.shield_outlined,
                       title: "Privacy & Security",
-                      onTap: () {},
+                      onTap: () => Get.to(
+                        () => const PrivacySecurityScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                     const Divider(height: 1, color: Color(0xFFFAF9F5)),
                     _buildOption(
                       icon: Icons.help_outline_outlined,
                       title: "Help & Support",
-                      onTap: () {},
+                      onTap: () => Get.to(
+                        () => const HelpSupportScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
                     ),
                   ],
                 ),
