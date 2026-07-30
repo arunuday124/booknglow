@@ -78,6 +78,8 @@ class LoginController extends GetxController {
       // Save / merge user document in Firestore "user" collection
       if (userCredential.user != null) {
         await UserService.createOrUpdateUser(userCredential.user!);
+        // Explicitly save FCM push token to Firestore
+        await UserService.savePushToken();
       }
 
       isLoading.value = false;
@@ -154,6 +156,8 @@ class LoginController extends GetxController {
       // Save / merge user document in Firestore "user" collection
       if (userCredential.user != null) {
         await UserService.createOrUpdateUser(userCredential.user!);
+        // Explicitly save FCM push token to Firestore
+        await UserService.savePushToken();
       }
 
       isGoogleLoading.value = false;

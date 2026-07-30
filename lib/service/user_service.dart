@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import '../model/user_model.dart';
 
@@ -42,6 +43,27 @@ class UserService {
         '🔥 [UserService] Document exists: ${snapshot.exists} | isNewUser: $isNewUser',
       );
 
+      // Fetch FCM push token for this device
+      String fcmToken = '';
+      try {
+        final settings = await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: true,
+        );
+        debugPrint('🔥 [UserService] FCM Permission status: ${settings.authorizationStatus}');
+        fcmToken = await FirebaseMessaging.instance.getToken() ?? '';
+        debugPrint('🔥 [UserService] FCM Token fetched: ${fcmToken.isEmpty ? "EMPTY - token was null" : fcmToken}');
+      } catch (e, st) {
+        debugPrint('⚠️ [UserService] FCM token error: $e');
+        debugPrint('⚠️ [UserService] FCM token stacktrace: $st');
+      }
+
+      // Use fresh token if available, otherwise keep existing one
+      final existingToken = snapshot.data()?['pushToken'] as String? ?? '';
+      final pushToken = fcmToken.isNotEmpty ? fcmToken : existingToken;
+
       final now = Timestamp.now();
       final userData = UserModel(
         uid: firebaseUser.uid,
@@ -53,7 +75,7 @@ class UserService {
         profileImages: isNewUser
             ? (firebaseUser.photoURL ?? '')
             : (snapshot.data()?['profileImages'] as String? ?? firebaseUser.photoURL ?? ''),
-        pushToken: snapshot.data()?['pushToken'] as String? ?? '',
+        pushToken: pushToken,
         lastLogin: now,
         createdAt: isNewUser
             ? now
@@ -110,6 +132,41 @@ class UserService {
         profileImages: fields['profileImages'] as String?,
         pushToken: fields['pushToken'] as String?,
       );
+    }
+  }
+
+  /// Fetches the current device's FCM token and saves it to the user's Firestore document.
+  /// Call this after login/signup to ensure pushToken is always up to date.
+  static Future<void> savePushToken() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      debugPrint('⚠️ [UserService] savePushToken: no logged-in user, skipping.');
+      return;
+    }
+
+    try {
+      debugPrint('🔥 [UserService] savePushToken: requesting FCM permission...');
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: true,
+      );
+      debugPrint('🔥 [UserService] savePushToken: permission = ${settings.authorizationStatus}');
+
+      debugPrint('🔥 [UserService] savePushToken: calling getToken()...');
+      final token = await FirebaseMessaging.instance.getToken();
+      debugPrint('🔥 [UserService] savePushToken: token = $token');
+
+      if (token != null && token.isNotEmpty) {
+        await updateUserFields(uid, {'pushToken': token});
+        debugPrint('✅ [UserService] savePushToken: pushToken saved to Firestore for uid $uid');
+      } else {
+        debugPrint('⚠️ [UserService] savePushToken: getToken() returned null/empty. Cannot save pushToken.');
+      }
+    } catch (e, st) {
+      debugPrint('❌ [UserService] savePushToken error: $e');
+      debugPrint('❌ [UserService] savePushToken stacktrace: $st');
     }
   }
 }
