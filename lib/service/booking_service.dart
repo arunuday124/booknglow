@@ -71,12 +71,109 @@ class BookingService {
       debugPrint(
         '✅ [BookingService] Booking document created with ID: ${docRef.id}',
       );
+
+      // Create staged notification document in 'notification' collection (sentAt = null until confirmed)
+      try {
+        final scheduledAtTimestamp = _parseScheduledTimestamp(date, time);
+
+        final notificationData = <String, dynamic>{
+          'bookingId': docRef.id,
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+          'notificationBody':
+              'Your appointment at $salonName for $date $time has been confirmed by the salon.',
+          'notificationTitle': 'Booking Confirmed! 🎉',
+          'notificationType': 'booking_status',
+          'salonId': salonId,
+          'scheduledAt': scheduledAtTimestamp,
+          'sentAt': null,
+          'userId': userId,
+        };
+
+        await _db.collection('notification').add(notificationData);
+        debugPrint(
+          '✅ [BookingService] Staged notification created with scheduledAt: $scheduledAtTimestamp for bookingId: ${docRef.id}',
+        );
+      } catch (nErr) {
+        debugPrint('⚠️ [BookingService] Error creating staged notification: $nErr');
+      }
+
       return docRef.id;
     } catch (e, stack) {
       debugPrint(
         '❌ [BookingService] ERROR creating booking document: $e\n$stack',
       );
       rethrow;
+    }
+  }
+
+  /// Parses date and time strings (e.g. "Mon, Aug 3, 2026" & "6:00 PM") into a Firestore Timestamp for scheduledAt
+  static Timestamp _parseScheduledTimestamp(String dateStr, String timeStr) {
+    try {
+      int year = DateTime.now().year;
+      int month = DateTime.now().month;
+      int day = DateTime.now().day;
+      int hour = 12;
+      int minute = 0;
+
+      // 1. Try standard ISO parse first
+      final isoDate = DateTime.tryParse(dateStr);
+      if (isoDate != null) {
+        year = isoDate.year;
+        month = isoDate.month;
+        day = isoDate.day;
+      } else {
+        // 2. Parse human-formatted date strings like "Mon, Aug 3, 2026", "Aug 3, 2026", "3 Aug 2026"
+        const monthMap = {
+          'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+          'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+          'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
+          'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+        };
+
+        // Extract year (4 digits starting with 20)
+        final yearMatch = RegExp(r'\b(20\d{2})\b').firstMatch(dateStr);
+        if (yearMatch != null) {
+          year = int.parse(yearMatch.group(1)!);
+        }
+
+        // Extract month name
+        final dateLower = dateStr.toLowerCase();
+        for (var entry in monthMap.entries) {
+          if (dateLower.contains(entry.key)) {
+            month = entry.value;
+            break;
+          }
+        }
+
+        // Extract day number (1 or 2 digits)
+        final dateWithoutYear = dateStr.replaceAll(RegExp(r'\b20\d{2}\b'), '');
+        final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(dateWithoutYear);
+        if (dayMatch != null) {
+          day = int.parse(dayMatch.group(1)!);
+        }
+      }
+
+      // 3. Parse timeStr (e.g. "6:00 PM", "06:00 PM", "18:00")
+      final timeRegExp = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)?', caseSensitive: false);
+      final timeMatch = timeRegExp.firstMatch(timeStr);
+      if (timeMatch != null) {
+        hour = int.parse(timeMatch.group(1)!);
+        minute = int.parse(timeMatch.group(2)!);
+        final period = timeMatch.group(3)?.toUpperCase();
+
+        if (period == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+      }
+
+      final scheduledDateTime = DateTime(year, month, day, hour, minute);
+      return Timestamp.fromDate(scheduledDateTime);
+    } catch (e) {
+      debugPrint('⚠️ Error parsing scheduledAt: $e');
+      return Timestamp.now();
     }
   }
 

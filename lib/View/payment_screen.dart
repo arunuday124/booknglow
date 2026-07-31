@@ -258,6 +258,21 @@ class PaymentScreen extends StatelessWidget {
       return;
     }
 
+    if (payController.selectedPaymentMethod.value == 0 ||
+        payController.selectedPaymentMethod.value == 1) {
+      Get.snackbar(
+        'Coming Soon',
+        '${payController.paymentMethodName} payment is coming soon. Please select Cash to proceed with your booking.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD97706),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
     final serviceNames = services
         .map(
           (s) => s['serviceName'] ?? s['name'] ?? s['title'] ?? 'Salon Service',
@@ -985,7 +1000,7 @@ class PaymentScreen extends StatelessWidget {
                         controller: payController.couponController,
                         textCapitalization: TextCapitalization.characters,
                         decoration: InputDecoration(
-                          hintText: "Enter Promo Code (e.g. GLOW20)",
+                          hintText: "Enter Promo Code",
                           hintStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 12.5,
                             color: Colors.grey.shade400,
@@ -1059,10 +1074,6 @@ class PaymentScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       _buildCouponChip('GLOW20', '20% OFF', payController),
-                      const SizedBox(width: 8),
-                      _buildCouponChip('WELCOME50', '₹50 OFF', payController),
-                      const SizedBox(width: 8),
-                      _buildCouponChip('BEAUTY100', '₹100 OFF', payController),
                     ],
                   ),
                 ),
@@ -1156,6 +1167,7 @@ class PaymentScreen extends StatelessWidget {
             iconBg: const Color(0xFFE2F2EE),
             iconColor: const Color(0xFF05352F),
             payController: payController,
+            isComingSoon: true,
           ),
           const SizedBox(height: 12),
           _buildPaymentMethodOption(
@@ -1166,6 +1178,7 @@ class PaymentScreen extends StatelessWidget {
             iconBg: const Color(0xFFF3E8FF),
             iconColor: const Color(0xFF7E22CE),
             payController: payController,
+            isComingSoon: true,
           ),
           const SizedBox(height: 12),
           _buildPaymentMethodOption(
@@ -1176,6 +1189,7 @@ class PaymentScreen extends StatelessWidget {
             iconBg: const Color(0xFFDCFCE7),
             iconColor: const Color(0xFF15803D),
             payController: payController,
+            isComingSoon: false,
           ),
         ],
       ),
@@ -1190,6 +1204,7 @@ class PaymentScreen extends StatelessWidget {
     required Color iconBg,
     required Color iconColor,
     required PaymentController payController,
+    bool isComingSoon = false,
   }) {
     return Obx(() {
       final isSelected = payController.selectedPaymentMethod.value == index;
@@ -1197,6 +1212,18 @@ class PaymentScreen extends StatelessWidget {
       return InkWell(
         onTap: () {
           payController.selectedPaymentMethod.value = index;
+          if (isComingSoon) {
+            Get.snackbar(
+              'Coming Soon',
+              '$title payment option is coming soon! Please select Cash to book your service.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: const Color(0xFF05352F),
+              colorText: Colors.white,
+              duration: const Duration(seconds: 2),
+              margin: const EdgeInsets.all(16),
+              borderRadius: 12,
+            );
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
@@ -1207,7 +1234,9 @@ class PaymentScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF05352F)
+                  ? (isComingSoon
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFF05352F))
                   : Colors.grey.shade200,
               width: isSelected ? 2.0 : 1.0,
             ),
@@ -1227,13 +1256,41 @@ class PaymentScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2C3E3A),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2C3E3A),
+                          ),
+                        ),
+                        if (isComingSoon) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFE8D5AF,
+                              ).withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              "COMING SOON",
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF9E7E45),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1251,7 +1308,9 @@ class PaymentScreen extends StatelessWidget {
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off,
                 color: isSelected
-                    ? const Color(0xFF05352F)
+                    ? (isComingSoon
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF05352F))
                     : Colors.grey.shade400,
                 size: 22,
               ),

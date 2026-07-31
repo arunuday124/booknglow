@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Controller/address_controller.dart';
+import '../Controller/notifications_controller.dart';
 import '../Controller/salon_controller.dart';
 import 'all_salons_screen.dart';
 import 'notifications_screen.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final salonsCtrl = Get.put(SalonsController());
+    final notifCtrl = Get.put(NotificationsController());
 
     // Categories list for beauty & wellness
     final List<Map<String, dynamic>> categories = [
@@ -137,17 +139,21 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF9E7E45), // Luxury gold alert
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                  Obx(
+                    () => notifCtrl.hasUnread
+                        ? Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF9E7E45), // Luxury gold alert
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
               ),
@@ -163,43 +169,43 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Search Bar
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color.fromRGBO(0, 0, 0, 0.03),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    color: const Color(0xFF2C3E3A),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: "Search salons, services or treatments...",
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      color: Colors.grey.shade400,
-                      fontSize: 14,
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: Color(0xFF05352F),
-                      size: 20,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
+              // Container(
+              //   decoration: BoxDecoration(
+              //     color: Colors.white,
+              //     borderRadius: BorderRadius.circular(12),
+              //     boxShadow: [
+              //       BoxShadow(
+              //         color: const Color.fromRGBO(0, 0, 0, 0.03),
+              //         blurRadius: 16,
+              //         offset: const Offset(0, 8),
+              //       ),
+              //     ],
+              //   ),
+              //   child: TextField(
+              //     style: GoogleFonts.plusJakartaSans(
+              //       fontSize: 14,
+              //       color: const Color(0xFF2C3E3A),
+              //     ),
+              //     decoration: InputDecoration(
+              //       hintText: "Search salons, services or treatments...",
+              //       hintStyle: GoogleFonts.plusJakartaSans(
+              //         color: Colors.grey.shade400,
+              //         fontSize: 14,
+              //       ),
+              //       prefixIcon: const Icon(
+              //         Icons.search,
+              //         color: Color(0xFF05352F),
+              //         size: 20,
+              //       ),
+              //       border: InputBorder.none,
+              //       contentPadding: const EdgeInsets.symmetric(
+              //         horizontal: 16,
+              //         vertical: 14,
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              // const SizedBox(height: 20),
 
               // Greeting
               Column(

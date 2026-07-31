@@ -60,6 +60,14 @@ class NotificationsScreen extends StatelessWidget {
         ],
       ),
       body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              color: _deepGreen,
+            ),
+          );
+        }
+
         if (controller.notifications.isEmpty) {
           return Center(
             child: Column(
@@ -114,9 +122,10 @@ class NotificationsScreen extends StatelessWidget {
           itemBuilder: (context, index) {
             final item = controller.notifications[index];
             final isUnread = item['isUnread'] as bool;
+            final docId = item['id'] as String;
 
             return GestureDetector(
-              onTap: () => controller.markAsRead(index),
+              onTap: () => controller.markAsRead(docId),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12.0),
                 padding: const EdgeInsets.all(16.0),
@@ -184,6 +193,46 @@ class NotificationsScreen extends StatelessWidget {
                               fontSize: 12.5,
                               color: const Color(0xFF4C6B64),
                               height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: InkWell(
+                              onTap: () => controller.addToGoogleCalendar(item),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF05352F).withValues(alpha: 0.07),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF05352F).withValues(alpha: 0.15),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_month_rounded,
+                                      size: 14,
+                                      color: _deepGreen,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Add to Google Calendar",
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: _deepGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],

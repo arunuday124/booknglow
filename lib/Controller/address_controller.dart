@@ -9,6 +9,34 @@ class AddressController extends GetxController {
   /// The currently selected address (null if none).
   final Rxn<SavedAddressModel> selectedAddress = Rxn<SavedAddressModel>();
 
+  /// Search query state for saved addresses.
+  final RxString searchQuery = ''.obs;
+
+  void updateSearchQuery(String query) {
+    searchQuery.value = query;
+  }
+
+  void clearSearch() {
+    searchQuery.value = '';
+  }
+
+  /// Filtered list of saved addresses matching searchQuery.
+  List<SavedAddressModel> get filteredAddresses {
+    final query = searchQuery.value.trim().toLowerCase();
+    if (query.isEmpty) {
+      return addresses;
+    }
+    return addresses.where((addr) {
+      return addr.name.toLowerCase().contains(query) ||
+          addr.address.toLowerCase().contains(query) ||
+          addr.locationName.toLowerCase().contains(query) ||
+          addr.building.toLowerCase().contains(query) ||
+          addr.landmark.toLowerCase().contains(query) ||
+          addr.type.toLowerCase().contains(query) ||
+          addr.houseNo.toLowerCase().contains(query);
+    }).toList();
+  }
+
   /// Loading state for operations.
   final RxBool isLoading = false.obs;
 

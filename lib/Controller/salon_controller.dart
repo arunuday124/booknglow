@@ -69,15 +69,18 @@ class SalonsController extends GetxController {
     final category = selectedCategory.value.toLowerCase().trim();
 
     return salons.where((salon) {
-      final matchesSearch = query.isEmpty ||
-          salon.salonName.toLowerCase().contains(query) ||
+      // 1. Fast category check first
+      if (category != 'all' &&
+          !salon.categories.any((c) => c.toLowerCase() == category)) {
+        return false;
+      }
+
+      // 2. Short-circuit search query check
+      if (query.isEmpty) return true;
+
+      return salon.salonName.toLowerCase().contains(query) ||
           salon.address.toLowerCase().contains(query) ||
           salon.ownerName.toLowerCase().contains(query);
-
-      final matchesCategory = category == 'all' ||
-          salon.categories.any((c) => c.toLowerCase() == category);
-
-      return matchesSearch && matchesCategory;
     }).toList();
   }
 

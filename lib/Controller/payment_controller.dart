@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 class PaymentController extends GetxController {
   // Selected payment method: 0 = Credit/Debit, 1 = UPI, 2 = Cash on Delivery
-  final RxInt selectedPaymentMethod = 0.obs;
+  final RxInt selectedPaymentMethod = 2.obs;
 
   // Coupon state
   final TextEditingController couponController = TextEditingController();
@@ -58,32 +58,6 @@ class PaymentController extends GetxController {
       Get.snackbar(
         'Coupon Applied!',
         '20% discount applied successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF05352F),
-        colorText: Colors.white,
-        borderRadius: 12,
-        margin: const EdgeInsets.all(16),
-      );
-    } else if (cleanCode == 'WELCOME50') {
-      appliedCoupon.value = 'WELCOME50';
-      discountAmount.value = 50.0;
-      couponError.value = null;
-      Get.snackbar(
-        'Coupon Applied!',
-        '₹50 flat discount applied successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF05352F),
-        colorText: Colors.white,
-        borderRadius: 12,
-        margin: const EdgeInsets.all(16),
-      );
-    } else if (cleanCode == 'BEAUTY100') {
-      appliedCoupon.value = 'BEAUTY100';
-      discountAmount.value = 100.0;
-      couponError.value = null;
-      Get.snackbar(
-        'Coupon Applied!',
-        '₹100 discount applied successfully',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFF05352F),
         colorText: Colors.white,

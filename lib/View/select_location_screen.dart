@@ -16,8 +16,13 @@ class SelectLocationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final addressController = Get.find<AddressController>();
+    final addressController = Get.isRegistered<AddressController>()
+        ? Get.find<AddressController>()
+        : Get.put(AddressController());
     final locationController = Get.put(SelectLocationController());
+
+    final searchController =
+        TextEditingController(text: addressController.searchQuery.value);
 
     return Scaffold(
       backgroundColor: _bg,
@@ -52,31 +57,45 @@ class SelectLocationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFDDE3E0)),
               ),
-              child: TextField(
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  color: const Color(0xFF2C3E3A),
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search an area or address',
-                  hintStyle: GoogleFonts.plusJakartaSans(
+              child: Obx(
+                () => TextField(
+                  controller: searchController,
+                  onChanged: addressController.updateSearchQuery,
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
-                    color: Colors.grey.shade400,
+                    color: const Color(0xFF2C3E3A),
                   ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: _textMuted,
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
+                  decoration: InputDecoration(
+                    hintText: 'Search saved address, area or landmark',
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: _textMuted,
+                      size: 20,
+                    ),
+                    suffixIcon: addressController.searchQuery.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.clear_rounded,
+                              color: _textMuted,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              addressController.clearSearch();
+                              searchController.clear();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                   ),
                 ),
-                onChanged: (_) {
-                  // Placeholder for search logic
-                },
               ),
             ),
           ),
@@ -135,14 +154,36 @@ class SelectLocationScreen extends StatelessWidget {
           // ── Saved Addresses Label ───────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'SAVED ADDRESSES',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _textMuted,
-                letterSpacing: 1.2,
-              ),
+            child: Obx(
+              () {
+                final isSearching =
+                    addressController.searchQuery.value.trim().isNotEmpty;
+                final count = addressController.filteredAddresses.length;
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isSearching ? 'SEARCH RESULTS' : 'SAVED ADDRESSES',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _textMuted,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    if (isSearching)
+                      Text(
+                        '$count found',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _green,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           const SizedBox(height: 10),
@@ -150,7 +191,9 @@ class SelectLocationScreen extends StatelessWidget {
           // ── Address List ────────────────────────────────────────────
           Expanded(
             child: Obx(() {
-              final addresses = addressController.addresses;
+              final isSearching =
+                  addressController.searchQuery.value.trim().isNotEmpty;
+              final addresses = addressController.filteredAddresses;
 
               if (addresses.isEmpty) {
                 return Center(
@@ -158,13 +201,17 @@ class SelectLocationScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.location_off_outlined,
+                        isSearching
+                            ? Icons.search_off_rounded
+                            : Icons.location_off_outlined,
                         size: 48,
                         color: _textMuted.withOpacity(0.5),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'No saved addresses yet',
+                        isSearching
+                            ? 'No matching addresses found'
+                            : 'No saved addresses yet',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           color: _textMuted,
@@ -172,7 +219,9 @@ class SelectLocationScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Tap "Add New Address" to get started',
+                        isSearching
+                            ? 'Try searching with a different area or keyword'
+                            : 'Tap "Add New Address" to get started',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: _textMuted.withOpacity(0.7),
