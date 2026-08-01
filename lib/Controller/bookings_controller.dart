@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../service/booking_service.dart';
+import '../service/transaction_service.dart';
 
 class BookingsController extends GetxController {
   // 0 for Upcoming, 1 for History
@@ -30,6 +31,7 @@ class BookingsController extends GetxController {
       final List<Map<String, dynamic>> history = [];
 
       for (var doc in list) {
+        final bookingId = doc['id']?.toString() ?? '';
         final servicesList = (doc['services'] as List<dynamic>?) ?? [];
         final List<Map<String, dynamic>> parsedServices = [];
         for (var s in servicesList) {
@@ -72,8 +74,16 @@ class BookingsController extends GetxController {
                 'Service')
             .join(', ');
 
+        final paymentMethod = doc['paymentMethod']?.toString() ?? 'card';
+        
+        // Fetch matching transaction to get current paymentStatus
+        final tx = await TransactionService.getTransactionByBookingId(bookingId);
+        final paymentStatus = tx?['paymentStatus']?.toString() ??
+            (paymentMethod.toLowerCase().trim().contains('cash') ? 'pending' : 'completed');
+        final transactionId = tx?['transactionId']?.toString() ?? '';
+
         final formattedMap = <String, dynamic>{
-          'id': doc['id']?.toString() ?? '',
+          'id': bookingId,
           'salonId': doc['salonId']?.toString() ?? '',
           'salon': doc['salonName']?.toString() ?? 'Salon',
           'salonLocation': doc['salonLocation']?.toString() ?? '',
@@ -84,7 +94,9 @@ class BookingsController extends GetxController {
           'time': doc['time']?.toString() ?? '',
           'status': doc['bookingStatus']?.toString() ?? 'Pending',
           'price': '₹${totalPrice.toStringAsFixed(2)}',
-          'paymentMethod': doc['paymentMethod']?.toString() ?? 'card',
+          'paymentMethod': paymentMethod,
+          'paymentStatus': paymentStatus,
+          'transactionId': transactionId,
         };
 
         final status = (doc['bookingStatus']?.toString() ?? '').toLowerCase().trim();
@@ -116,6 +128,38 @@ class BookingsController extends GetxController {
     selectedTab.value = index;
   }
 
+  /// Marks a pending cash payment as completed in Firestore transactions collection
+  /// and updates local state.
+  Future<bool> markPaymentAsComplete(String bookingId, {String? transactionId}) async {
+    try {
+      final success = await TransactionService.markPaymentAsComplete(
+        transactionId: transactionId,
+        bookingId: bookingId,
+      );
+
+      if (success) {
+        for (var b in upcomingBookings) {
+          if (b['id'] == bookingId) {
+            b['paymentStatus'] = 'completed';
+            break;
+          }
+        }
+        for (var b in historyBookings) {
+          if (b['id'] == bookingId) {
+            b['paymentStatus'] = 'completed';
+            break;
+          }
+        }
+        upcomingBookings.refresh();
+        historyBookings.refresh();
+        return true;
+      }
+    } catch (e, stack) {
+      debugPrint('❌ [BookingsController] Error completing cash payment: $e\n$stack');
+    }
+    return false;
+  }
+
   /// Immediately creates the booking document in Firestore.
   /// On success, updates local UI state directly without re-fetching all bookings.
   Future<bool> addBooking({
@@ -142,6 +186,9 @@ class BookingsController extends GetxController {
         }
       }
 
+      final isCash = paymentMethod.toLowerCase().trim().contains('cash');
+      final initialPaymentStatus = isCash ? 'pending' : 'completed';
+
       // 1. Immediately create document in Firestore
       final docId = await BookingService.createBooking(
         salonId: salonId,
@@ -167,6 +214,8 @@ class BookingsController extends GetxController {
         'status': bookingStatus,
         'price': '₹${totalPrice.toStringAsFixed(2)}',
         'paymentMethod': paymentMethod,
+        'paymentStatus': initialPaymentStatus,
+        'transactionId': '',
       });
       selectedTab.value = 0;
       return true;
@@ -176,3 +225,4 @@ class BookingsController extends GetxController {
     }
   }
 }
+

@@ -25,7 +25,7 @@ class PaymentController extends GetxController {
       case 1:
         return "UPI (GPay/PhonePe/Paytm)";
       case 2:
-        return "Cash on Delivery";
+        return "Cash";
       default:
         return "Card";
     }

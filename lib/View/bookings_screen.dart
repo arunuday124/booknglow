@@ -376,23 +376,25 @@ class UpcomingBookingsTab extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  TextButton(
-                                    onPressed: () {},
-                                    child: Text(
-                                      "Reschedule",
-                                      style: GoogleFonts.plusJakartaSans(
-                                        textStyle: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF9E7E45),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+
+                              // i will implemwnt it later when ever i need it
+                              // Row(
+                              //   children: [
+                              //     TextButton(
+                              //       onPressed: () {},
+                              //       child: Text(
+                              //         "Reschedule",
+                              //         style: GoogleFonts.plusJakartaSans(
+                              //           textStyle: const TextStyle(
+                              //             fontSize: 13,
+                              //             fontWeight: FontWeight.bold,
+                              //             color: Color(0xFF9E7E45),
+                              //           ),
+                              //         ),
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
                             ],
                           ),
                         ),

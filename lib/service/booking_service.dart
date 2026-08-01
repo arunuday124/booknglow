@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'user_service.dart';
+import 'transaction_service.dart';
 
 /// Handles all Firestore operations for the `bookings` collection.
 class BookingService {
@@ -71,6 +72,32 @@ class BookingService {
       debugPrint(
         '✅ [BookingService] Booking document created with ID: ${docRef.id}',
       );
+
+      // Create transaction document in 'transactions' collection
+      try {
+        int totalAmountInt = 0;
+        for (var s in firestoreServices) {
+          final p = s['price'];
+          if (p is num) {
+            totalAmountInt += p.toInt();
+          }
+        }
+
+        final txId = await TransactionService.createTransaction(
+          bookingId: docRef.id,
+          salonId: salonId,
+          salonName: salonName,
+          amount: totalAmountInt,
+          paymentMethod: paymentMethod,
+          userId: userId,
+          userName: userName,
+        );
+        debugPrint(
+          '✅ [BookingService] Transaction document created with ID: $txId',
+        );
+      } catch (txErr) {
+        debugPrint('⚠️ [BookingService] Error creating transaction document: $txErr');
+      }
 
       // Create staged notification document in 'notification' collection (sentAt = null until confirmed)
       try {

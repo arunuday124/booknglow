@@ -159,7 +159,7 @@ class BookingSuccessScreen extends StatelessWidget {
                         icon: Icons.payment_rounded,
                         label: "Payment",
                         value:
-                            "$paymentMethod (₹${totalAmount.toStringAsFixed(2)})",
+                            "${paymentMethod.toLowerCase().contains('cash') ? 'Cash' : paymentMethod} (₹${totalAmount.toStringAsFixed(2)})",
                         valueColor: const Color(0xFF9E7E45),
                         isBold: true,
                       ),
