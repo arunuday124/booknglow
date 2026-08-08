@@ -11,6 +11,10 @@ class AddAddressScreen extends StatelessWidget {
   final String locationAddress;
   final GeoPoint location;
   final SavedAddressModel? existingAddress;
+  final String? houseNo;
+  final String? floor;
+  final String? building;
+  final String? landmark;
 
   const AddAddressScreen({
     super.key,
@@ -18,6 +22,10 @@ class AddAddressScreen extends StatelessWidget {
     required this.locationAddress,
     required this.location,
     this.existingAddress,
+    this.houseNo,
+    this.floor,
+    this.building,
+    this.landmark,
   });
 
   static const _green = Color(0xFF05352F);
@@ -33,7 +41,19 @@ class AddAddressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(AddAddressController());
-    controller.initForAddress(existingAddress);
+    if (existingAddress != null) {
+      controller.initForAddress(existingAddress);
+    } else {
+      controller.initForLocation(
+        locationName: locationName,
+        locationAddress: locationAddress,
+        location: location,
+        houseNo: houseNo,
+        floor: floor,
+        building: building,
+        landmark: landmark,
+      );
+    }
 
     final isEditing = existingAddress != null;
 
@@ -112,7 +132,7 @@ class AddAddressScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Location preview card
+              // Location preview card with Use Current Location action
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -155,6 +175,56 @@ class AddAddressScreen extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Obx(
+                      () => InkWell(
+                        onTap: controller.isFetchingLocation.value
+                            ? null
+                            : () => controller.fetchAndFillCurrentLocation(),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2F2EE),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _green.withOpacity(0.2),
+                            ),
+                          ),
+                          child: controller.isFetchingLocation.value
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _green,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.my_location,
+                                      size: 13,
+                                      color: _green,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Auto-fill',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
                     ),
                   ],

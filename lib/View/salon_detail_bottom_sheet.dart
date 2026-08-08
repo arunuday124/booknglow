@@ -423,117 +423,147 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      SizedBox(
-                        height: 42,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: controller.availableTimes.length,
-                          itemBuilder: (context, index) {
-                            final timeSlot = controller.availableTimes[index];
-
-                            return Obx(() {
-                              final isSelected =
-                                  controller.selectedTime.value == timeSlot;
-                              final isLocked = controller.isSlotLocked(
-                                timeSlot,
-                              );
-
-                              return GestureDetector(
-                                onTap: isLocked
-                                    ? () {
-                                        Get.snackbar(
-                                          'Slot Locked',
-                                          'This time slot ($timeSlot) is already booked and locked.',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: const Color.fromARGB(
-                                            255,
-                                            219,
-                                            62,
-                                            5,
-                                          ),
-                                          colorText: Colors.white,
-                                          margin: const EdgeInsets.all(16),
-                                          borderRadius: 12,
-                                          duration: const Duration(seconds: 2),
-                                        );
-                                      }
-                                    : () => controller.selectTime(timeSlot),
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 12),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isLocked
-                                        ? const Color(0xFFEFECE6)
-                                        : isSelected
-                                        ? const Color(0xFF05352F)
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isLocked
-                                          ? const Color(0xFFD6CFC4)
-                                          : isSelected
-                                          ? const Color(0xFF05352F)
-                                          : const Color(
-                                              0xFFE8D5AF,
-                                            ).withValues(alpha: 0.3),
-                                      width: 1,
+                      Obx(() {
+                        final times = controller.filteredAvailableTimes;
+                        if (times.isEmpty) {
+                          return Container(
+                            height: 42,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 16,
+                                  color: Color(0xFF9E7E45),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "No time slots available for today. Please choose a future date.",
+                                  style: GoogleFonts.plusJakartaSans(
+                                    textStyle: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF7A8D87),
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    boxShadow: isLocked
-                                        ? []
-                                        : [
-                                            BoxShadow(
-                                              color: isSelected
-                                                  ? const Color(
-                                                      0xFF05352F,
-                                                    ).withValues(alpha: 0.15)
-                                                  : const Color.fromRGBO(
-                                                      0,
-                                                      0,
-                                                      0,
-                                                      0.02,
-                                                    ),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isLocked) ...[
-                                        const Icon(
-                                          Icons.lock_rounded,
-                                          size: 14,
-                                          color: Color(0xFF9E9588),
-                                        ),
-                                        const SizedBox(width: 6),
-                                      ],
-                                      Text(
-                                        timeSlot,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          textStyle: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: isLocked
-                                                ? const Color(0xFF9E9588)
-                                                : isSelected
-                                                ? Colors.white
-                                                : const Color(0xFF05352F),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ),
-                              );
-                            });
-                          },
-                        ),
-                      ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return SizedBox(
+                          height: 42,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: times.length,
+                            itemBuilder: (context, index) {
+                              final timeSlot = times[index];
+
+                              return Obx(() {
+                                final isSelected =
+                                    controller.selectedTime.value == timeSlot;
+                                final isLocked = controller.isSlotLocked(
+                                  timeSlot,
+                                );
+
+                                return GestureDetector(
+                                  onTap: isLocked
+                                      ? () {
+                                          Get.snackbar(
+                                            'Slot Locked',
+                                            'This time slot ($timeSlot) is already booked and locked.',
+                                            snackPosition: SnackPosition.BOTTOM,
+                                            backgroundColor: const Color.fromARGB(
+                                              255,
+                                              219,
+                                              62,
+                                              5,
+                                            ),
+                                            colorText: Colors.white,
+                                            margin: const EdgeInsets.all(16),
+                                            borderRadius: 12,
+                                            duration: const Duration(seconds: 2),
+                                          );
+                                        }
+                                      : () => controller.selectTime(timeSlot),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isLocked
+                                          ? const Color(0xFFEFECE6)
+                                          : isSelected
+                                          ? const Color(0xFF05352F)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isLocked
+                                            ? const Color(0xFFD6CFC4)
+                                            : isSelected
+                                            ? const Color(0xFF05352F)
+                                            : const Color(
+                                                0xFFE8D5AF,
+                                              ).withValues(alpha: 0.3),
+                                        width: 1,
+                                      ),
+                                      boxShadow: isLocked
+                                          ? []
+                                          : [
+                                              BoxShadow(
+                                                color: isSelected
+                                                    ? const Color(
+                                                        0xFF05352F,
+                                                      ).withValues(alpha: 0.15)
+                                                    : const Color.fromRGBO(
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0.02,
+                                                      ),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 3),
+                                              ),
+                                            ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isLocked) ...[
+                                          const Icon(
+                                            Icons.lock_rounded,
+                                            size: 14,
+                                            color: Color(0xFF9E9588),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Text(
+                                          timeSlot,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            textStyle: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: isLocked
+                                                  ? const Color(0xFF9E9588)
+                                                  : isSelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF05352F),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              });
+                            },
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 24),
 
                       Divider(

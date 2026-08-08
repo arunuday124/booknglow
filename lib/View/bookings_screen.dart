@@ -561,65 +561,83 @@ class HistoryBookingsTab extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        InkWell(
-                                          onTap: () {
-                                            RatingReviewBottomSheet.show(
-                                              context,
-                                              salonId:
-                                                  booking['salonId']
-                                                      ?.toString() ??
-                                                  '',
-                                              salonName:
-                                                  booking['salon']
-                                                      ?.toString() ??
-                                                  'Salon',
-                                              serviceName:
-                                                  booking['service']
-                                                      ?.toString() ??
-                                                  'Salon Service',
-                                            );
-                                          },
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFFFBEB),
-                                              border: Border.all(
-                                                color: const Color(0xFFFDE68A),
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: Row(
+                                        Obx(() {
+                                          final bookingId = booking['id']?.toString() ?? '';
+                                          final existingRating = controller.userRatings[bookingId];
+
+                                          if (existingRating != null && existingRating > 0) {
+                                            // Show filled stars for the submitted rating
+                                            return Row(
                                               mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.star_rounded,
-                                                  size: 15,
-                                                  color: Color(0xFFD97706),
+                                              children: List.generate(5, (i) {
+                                                return Icon(
+                                                  i < existingRating.round()
+                                                      ? Icons.star_rounded
+                                                      : Icons.star_outline_rounded,
+                                                  size: 18,
+                                                  color: const Color(0xFFFFB800),
+                                                );
+                                              }),
+                                            );
+                                          }
+
+                                          // Show Rate button if not yet reviewed
+                                          return InkWell(
+                                            onTap: () {
+                                              RatingReviewBottomSheet.show(
+                                                context,
+                                                salonId:
+                                                    booking['salonId']
+                                                        ?.toString() ??
+                                                    '',
+                                                salonName:
+                                                    booking['salon']
+                                                        ?.toString() ??
+                                                    'Salon',
+                                                serviceName:
+                                                    booking['service']
+                                                        ?.toString() ??
+                                                    'Salon Service',
+                                                onSuccess: (rating) {
+                                                  controller.setLocalRating(bookingId, rating);
+                                                },
+                                              );
+                                            },
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFFBEB),
+                                                border: Border.all(
+                                                  color: const Color(0xFFFDE68A),
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  "Rate",
-                                                  style:
-                                                      GoogleFonts.plusJakartaSans(
-                                                        fontSize: 11.5,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: const Color(
-                                                          0xFF92400E,
-                                                        ),
-                                                      ),
-                                                ),
-                                              ],
+                                                borderRadius: BorderRadius.circular(16),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.star_rounded,
+                                                    size: 15,
+                                                    color: Color(0xFFD97706),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    "Rate",
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: const Color(0xFF92400E),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
+                                          );
+                                        }),
                                       ],
                                     ),
                                   ],

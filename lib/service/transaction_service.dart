@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../model/transaction_model.dart';
 
 /// Handles Firestore operations for the `transactions` collection.
 class TransactionService {
@@ -59,6 +60,7 @@ class TransactionService {
       debugPrint(
         '✅ [TransactionService] Transaction document created with ID: ${docRef.id}',
       );
+      clearCache();
 
       return docRef.id;
     } catch (e, stack) {
@@ -86,6 +88,7 @@ class TransactionService {
         debugPrint(
           '✅ [TransactionService] Payment status updated to completed for transaction ID: $transactionId',
         );
+        clearCache();
         return true;
       } else if (bookingId != null && bookingId.isNotEmpty) {
         final querySnapshot = await _transactionsCol
@@ -101,6 +104,7 @@ class TransactionService {
         debugPrint(
           '✅ [TransactionService] Payment status updated to completed for booking ID: $bookingId',
         );
+        clearCache();
         return true;
       }
       return false;
@@ -133,4 +137,71 @@ class TransactionService {
     }
     return null;
   }
+
+  static final List<TransactionModel> _cachedTransactions = [];
+  static bool _hasFetchedInitial = false;
+
+  /// Gets unmodifiable list of cached transactions
+  static List<TransactionModel> get cachedTransactions => List.unmodifiable(_cachedTransactions);
+
+  /// Clears in-memory cache
+  static void clearCache() {
+    _cachedTransactions.clear();
+    _hasFetchedInitial = false;
+  }
+
+  /// Updates local memory cache from a list
+  static void updateCache(List<TransactionModel> list) {
+    _cachedTransactions.clear();
+    _cachedTransactions.addAll(list);
+    _hasFetchedInitial = true;
+  }
+
+  /// Returns a real-time stream of [TransactionModel] for a specific user ID.
+  static Stream<List<TransactionModel>> getUserTransactionsStream(String userId) {
+    return _transactionsCol
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs.map((doc) => TransactionModel.fromSnapshot(doc)).toList();
+      // Sort newest first
+      list.sort((a, b) {
+        if (a.createdAt == null && b.createdAt == null) return 0;
+        if (a.createdAt == null) return 1;
+        if (b.createdAt == null) return -1;
+        return b.createdAt!.compareTo(a.createdAt!);
+      });
+      updateCache(list);
+      return list;
+    });
+  }
+
+  /// Fetches transactions directly with optional forceRefresh
+  static Future<List<TransactionModel>> fetchUserTransactions(
+    String userId, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _hasFetchedInitial && _cachedTransactions.isNotEmpty) {
+      debugPrint('⚡ [TransactionService] Returning ${_cachedTransactions.length} cached transactions (0 DB calls).');
+      return List.from(_cachedTransactions);
+    }
+
+    try {
+      debugPrint('🔥 [TransactionService] Fetching user transactions from Firestore DB...');
+      final snapshot = await _transactionsCol.where('userId', isEqualTo: userId).get();
+      final list = snapshot.docs.map((doc) => TransactionModel.fromSnapshot(doc)).toList();
+      list.sort((a, b) {
+        if (a.createdAt == null && b.createdAt == null) return 0;
+        if (a.createdAt == null) return 1;
+        if (b.createdAt == null) return -1;
+        return b.createdAt!.compareTo(a.createdAt!);
+      });
+      updateCache(list);
+      return list;
+    } catch (e) {
+      debugPrint('❌ [TransactionService] Error fetching user transactions: $e');
+      return _cachedTransactions;
+    }
+  }
 }
+

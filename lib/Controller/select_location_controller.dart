@@ -17,6 +17,10 @@ class SelectLocationController extends GetxController {
           locationName: result.locationName,
           locationAddress: result.locationAddress,
           location: GeoPoint(result.latitude, result.longitude),
+          houseNo: result.houseNo,
+          floor: result.floor,
+          building: result.building,
+          landmark: result.landmark,
         ),
       );
     } catch (e) {

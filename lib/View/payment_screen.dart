@@ -80,7 +80,7 @@ class PaymentScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Select Delivery Address",
+                  "Select Address",
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -729,7 +729,7 @@ class PaymentScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    "Delivery Address",
+                    "Address",
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

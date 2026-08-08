@@ -29,6 +29,7 @@ class RatingReviewController extends GetxController {
     required String salonId,
     required String salonName,
     required String serviceName,
+    void Function(double rating)? onSuccess,
   }) async {
     final reviewText = reviewController.text.trim();
     if (reviewText.isEmpty) {
@@ -47,17 +48,19 @@ class RatingReviewController extends GetxController {
 
     isSubmitting.value = true;
 
+    final submittedRating = rating.value;
     final result = await ReviewService.submitReview(
       salonId: salonId,
       salonName: salonName,
       serviceName: serviceName,
-      ratings: rating.value,
+      ratings: submittedRating,
       review: reviewText,
     );
 
     isSubmitting.value = false;
 
     if (result == 'SUCCESS') {
+      onSuccess?.call(submittedRating);
       reset();
 
       if (context != null && context.mounted) {

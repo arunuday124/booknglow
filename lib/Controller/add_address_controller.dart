@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../model/saved_address_model.dart';
 import '../service/address_service.dart';
+import '../service/location_service.dart';
 
 class AddAddressController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -28,6 +29,8 @@ class AddAddressController extends GetxController {
     super.onClose();
   }
 
+  final RxBool isFetchingLocation = false.obs;
+
   void initForAddress(SavedAddressModel? model) {
     if (model != null) {
       editingAddressId = model.id;
@@ -45,6 +48,77 @@ class AddAddressController extends GetxController {
       buildingController.clear();
       landmarkController.clear();
       selectedType.value = 'Home';
+    }
+  }
+
+  void initForLocation({
+    required String locationName,
+    required String locationAddress,
+    required GeoPoint location,
+    String? houseNo,
+    String? floor,
+    String? building,
+    String? landmark,
+  }) {
+    editingAddressId = null;
+    existingAddressModel = null;
+
+    houseController.text = (houseNo != null && houseNo.isNotEmpty)
+        ? houseNo
+        : (locationName.isNotEmpty &&
+                locationName != 'Current Location' &&
+                locationName != 'My Location'
+            ? locationName
+            : '');
+
+    floorController.text = floor ?? '';
+
+    buildingController.text = (building != null && building.isNotEmpty)
+        ? building
+        : (locationAddress.isNotEmpty &&
+                locationAddress != 'Enter your full address'
+            ? locationAddress
+            : '');
+
+    landmarkController.text = landmark ?? '';
+    selectedType.value = 'Home';
+  }
+
+  Future<void> fetchAndFillCurrentLocation() async {
+    isFetchingLocation.value = true;
+    try {
+      final result = await LocationService.getCurrentLocation();
+      initForLocation(
+        locationName: result.locationName,
+        locationAddress: result.locationAddress,
+        location: GeoPoint(result.latitude, result.longitude),
+        houseNo: result.houseNo,
+        floor: result.floor,
+        building: result.building,
+        landmark: result.landmark,
+      );
+
+      Get.snackbar(
+        'Location Detected',
+        'Address fields filled from your current location.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: greenColor,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Location Error',
+        e.toString().replaceAll('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } finally {
+      isFetchingLocation.value = false;
     }
   }
 

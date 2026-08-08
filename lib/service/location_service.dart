@@ -6,17 +6,25 @@ class LocationResult {
   final double longitude;
   final String locationName;
   final String locationAddress;
+  final String houseNo;
+  final String floor;
+  final String building;
+  final String landmark;
 
   LocationResult({
     required this.latitude,
     required this.longitude,
     required this.locationName,
     required this.locationAddress,
+    this.houseNo = '',
+    this.floor = '',
+    this.building = '',
+    this.landmark = '',
   });
 }
 
 class LocationService {
-  /// Fetches the current GPS position and reverse geocodes it to a location name and address.
+  /// Fetches the current GPS position and reverse geocodes it to detailed address components.
   static Future<LocationResult> getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -54,10 +62,14 @@ class LocationService {
       ),
     );
 
-    // Reverse geocode to get address details
+    // Default fallbacks
     String locationName = 'Current Location';
     String locationAddress =
         '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+    String houseNo = '';
+    String floor = '';
+    String building = '';
+    String landmark = '';
 
     try {
       final placemarks = await placemarkFromCoordinates(
@@ -68,44 +80,87 @@ class LocationService {
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
 
-        // Build location name (e.g. SubLocality, Locality)
-        final nameParts = <String>[];
-        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-          nameParts.add(place.subLocality!);
-        } else if (place.name != null && place.name!.isNotEmpty) {
-          nameParts.add(place.name!);
+        // 1. House / Flat / Block No.
+        if (place.subThoroughfare != null &&
+            place.subThoroughfare!.trim().isNotEmpty) {
+          houseNo = place.subThoroughfare!.trim();
+        } else if (place.name != null &&
+            place.name!.trim().isNotEmpty &&
+            place.name != place.street &&
+            place.name != place.locality &&
+            place.name != place.subLocality) {
+          houseNo = place.name!.trim();
         }
 
-        if (place.locality != null && place.locality!.isNotEmpty) {
-          nameParts.add(place.locality!);
+        // 2. Floor (if detected in name or street)
+        final combined = '${place.name ?? ''} ${place.street ?? ''}'.toLowerCase();
+        final floorMatch = RegExp(r'(\d+)(?:st|nd|rd|th)?\s*floor').firstMatch(combined);
+        if (floorMatch != null) {
+          floor = floorMatch.group(1) ?? '';
+        }
+
+        // 3. Apartment / Road / Area
+        final buildingParts = <String>{};
+        if (place.thoroughfare != null && place.thoroughfare!.trim().isNotEmpty) {
+          buildingParts.add(place.thoroughfare!.trim());
+        } else if (place.street != null && place.street!.trim().isNotEmpty && place.street != houseNo) {
+          buildingParts.add(place.street!.trim());
+        }
+
+        if (place.subLocality != null && place.subLocality!.trim().isNotEmpty) {
+          buildingParts.add(place.subLocality!.trim());
+        }
+        if (place.locality != null && place.locality!.trim().isNotEmpty) {
+          buildingParts.add(place.locality!.trim());
+        }
+
+        building = buildingParts.join(', ');
+
+        // If houseNo was empty and building is available, use first street part
+        if (houseNo.isEmpty && place.name != null && place.name!.trim().isNotEmpty) {
+          houseNo = place.name!.trim();
+        }
+
+        // 4. Landmark / Nearby Area
+        if (place.subLocality != null && place.subLocality!.trim().isNotEmpty) {
+          landmark = 'Near ${place.subLocality!.trim()}';
+        } else if (place.administrativeArea != null && place.administrativeArea!.trim().isNotEmpty) {
+          landmark = place.administrativeArea!.trim();
+        }
+
+        // 5. Short location name
+        final nameParts = <String>[];
+        if (place.subLocality != null && place.subLocality!.trim().isNotEmpty) {
+          nameParts.add(place.subLocality!.trim());
+        } else if (place.locality != null && place.locality!.trim().isNotEmpty) {
+          nameParts.add(place.locality!.trim());
+        } else if (place.name != null && place.name!.trim().isNotEmpty) {
+          nameParts.add(place.name!.trim());
         }
 
         if (nameParts.isNotEmpty) {
           locationName = nameParts.join(', ');
-        } else if (place.administrativeArea != null &&
-            place.administrativeArea!.isNotEmpty) {
-          locationName = place.administrativeArea!;
+        } else if (place.administrativeArea != null && place.administrativeArea!.trim().isNotEmpty) {
+          locationName = place.administrativeArea!.trim();
         }
 
-        // Build full address
+        // 6. Full location address string
         final addrParts = <String>[];
-        if (place.street != null &&
-            place.street!.isNotEmpty &&
-            place.street != place.name) {
-          addrParts.add(place.street!);
+        if (houseNo.isNotEmpty) addrParts.add(houseNo);
+        if (place.street != null && place.street!.trim().isNotEmpty && place.street != houseNo) {
+          addrParts.add(place.street!.trim());
         }
-        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-          addrParts.add(place.subLocality!);
+        if (place.subLocality != null && place.subLocality!.trim().isNotEmpty && !addrParts.contains(place.subLocality!.trim())) {
+          addrParts.add(place.subLocality!.trim());
         }
-        if (place.locality != null && place.locality!.isNotEmpty) {
-          addrParts.add(place.locality!);
+        if (place.locality != null && place.locality!.trim().isNotEmpty && !addrParts.contains(place.locality!.trim())) {
+          addrParts.add(place.locality!.trim());
         }
-        if (place.administrativeArea != null &&
-            place.administrativeArea!.isNotEmpty) {
-          addrParts.add(place.administrativeArea!);
+        if (place.administrativeArea != null && place.administrativeArea!.trim().isNotEmpty && !addrParts.contains(place.administrativeArea!.trim())) {
+          addrParts.add(place.administrativeArea!.trim());
         }
-        if (place.postalCode != null && place.postalCode!.isNotEmpty) {
-          addrParts.add(place.postalCode!);
+        if (place.postalCode != null && place.postalCode!.trim().isNotEmpty) {
+          addrParts.add(place.postalCode!.trim());
         }
 
         if (addrParts.isNotEmpty) {
@@ -113,7 +168,7 @@ class LocationService {
         }
       }
     } catch (e) {
-      // Fallback if reverse geocoding fails or is unavailable
+      // Fallback if reverse geocoding fails
     }
 
     return LocationResult(
@@ -121,6 +176,10 @@ class LocationService {
       longitude: position.longitude,
       locationName: locationName,
       locationAddress: locationAddress,
+      houseNo: houseNo,
+      floor: floor,
+      building: building.isNotEmpty ? building : locationAddress,
+      landmark: landmark,
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../Controller/personal_info_controller.dart';
 import 'login.dart';
 import 'personal_info.dart';
+import 'transaction_history_screen.dart';
 import 'payment_methods_screen.dart';
 import 'privacy_security_screen.dart';
 import 'help_support_screen.dart';
@@ -293,6 +294,16 @@ class ProfileScreen extends StatelessWidget {
                       title: "Personal Information",
                       onTap: () => Get.to(
                         () => const PersonalInfoScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFFAF9F5)),
+                    _buildOption(
+                      icon: Icons.receipt_long_outlined,
+                      title: "Transaction History",
+                      onTap: () => Get.to(
+                        () => const TransactionHistoryScreen(),
                         transition: Transition.rightToLeft,
                         duration: const Duration(milliseconds: 300),
                       ),

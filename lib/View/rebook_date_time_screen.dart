@@ -29,14 +29,76 @@ class RebookDateTimeScreen extends StatelessWidget {
     required this.originalTime,
   })  : availableDates = List.generate(
           14,
-          (index) => DateTime.now().add(Duration(days: index)),
+          (index) {
+            final now = DateTime.now();
+            return DateTime(now.year, now.month, now.day)
+                .add(Duration(days: index));
+          },
         ),
         availableTimes = _buildAvailableTimes(originalTime) {
     selectedDate.value = availableDates.first;
     final trimmedOriginal = originalTime.trim();
-    if (trimmedOriginal.isNotEmpty) {
+    final validTimes = _getFilteredTimesForDate(availableDates.first, availableTimes);
+
+    if (trimmedOriginal.isNotEmpty && validTimes.contains(trimmedOriginal)) {
       selectedTime.value = trimmedOriginal;
+      useSameTimeAsLast.value = true;
+    } else if (validTimes.isNotEmpty) {
+      selectedTime.value = validTimes.first;
+      useSameTimeAsLast.value = false;
+    } else {
+      selectedTime.value = '';
+      useSameTimeAsLast.value = false;
     }
+  }
+
+  static bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  static int? _parseToMinutes(String timeStr) {
+    if (timeStr.isEmpty) return null;
+
+    final upper = timeStr.toUpperCase();
+    final isPM = upper.contains('PM');
+    final isAM = upper.contains('AM');
+
+    final cleanStr = upper.replaceAll(RegExp(r'[^0-9:]'), '').trim();
+    if (cleanStr.isEmpty) return null;
+
+    final parts = cleanStr.split(':');
+    int hour = int.tryParse(parts[0]) ?? 0;
+    int minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+
+    if (isPM && hour < 12) {
+      hour += 12;
+    } else if (isAM && hour == 12) {
+      hour = 0;
+    }
+
+    return hour * 60 + minute;
+  }
+
+  static List<String> _getFilteredTimesForDate(
+      DateTime date, List<String> times) {
+    if (!_isToday(date)) {
+      return times;
+    }
+    final now = DateTime.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+
+    return times.where((slot) {
+      final slotMinutes = _parseToMinutes(slot);
+      if (slotMinutes == null) return true;
+      return slotMinutes > currentMinutes;
+    }).toList();
+  }
+
+  List<String> get filteredAvailableTimes {
+    return _getFilteredTimesForDate(selectedDate.value, availableTimes);
   }
 
   static List<String> _buildAvailableTimes(String orig) {
@@ -180,6 +242,9 @@ class RebookDateTimeScreen extends StatelessWidget {
             Obx(() {
               final isSameTime = useSameTimeAsLast.value;
               final selDate = selectedDate.value;
+              final validTimes = filteredAvailableTimes;
+              final trimmedOrig = originalTime.trim();
+              final isOrigValid = trimmedOrig.isNotEmpty && validTimes.contains(trimmedOrig);
 
               return Container(
                 width: double.infinity,
@@ -220,7 +285,22 @@ class RebookDateTimeScreen extends StatelessWidget {
                         ),
                         GestureDetector(
                           onTap: () {
+                            if (!isOrigValid) {
+                              Get.snackbar(
+                                'Time Slot Passed',
+                                'The previous time slot ($originalTime) has already passed for today. Please pick an upcoming time slot.',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: const Color(0xFF05352F),
+                                colorText: Colors.white,
+                                margin: const EdgeInsets.all(16),
+                                borderRadius: 12,
+                              );
+                              return;
+                            }
                             useSameTimeAsLast.value = !useSameTimeAsLast.value;
+                            if (useSameTimeAsLast.value) {
+                              selectedTime.value = trimmedOrig;
+                            }
                           },
                           child: Text(
                             isSameTime ? "Change" : "Use Quick-Pick",
@@ -236,7 +316,7 @@ class RebookDateTimeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Rebook for Today (${_formatMonthDay(selDate)}) at ${originalTime.isNotEmpty ? originalTime : '10:00 AM'}",
+                      "Rebook for ${_formatMonthDay(selDate)} at ${originalTime.isNotEmpty ? originalTime : '10:00 AM'}",
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5,
                         color: const Color(0xFF2C3E3A),
@@ -292,6 +372,14 @@ class RebookDateTimeScreen extends StatelessWidget {
                       onTap: () {
                         selectedDate.value = date;
                         useSameTimeAsLast.value = false;
+                        final currentTimes = filteredAvailableTimes;
+                        if (!currentTimes.contains(selectedTime.value)) {
+                          if (currentTimes.isNotEmpty) {
+                            selectedTime.value = currentTimes.first;
+                          } else {
+                            selectedTime.value = '';
+                          }
+                        }
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -364,50 +452,85 @@ class RebookDateTimeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: availableTimes.map((time) {
-                return Obx(() {
-                  final isSelected = selectedTime.value == time;
-                  return GestureDetector(
-                    onTap: () {
-                      selectedTime.value = time;
-                      useSameTimeAsLast.value = false;
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+            Obx(() {
+              final times = filteredAvailableTimes;
+              if (times.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: Color(0xFF9E7E45),
+                        size: 20,
                       ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF05352F)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "No time slots available for today. Please select a future date.",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: const Color(0xFF7A8D87),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: times.map((time) {
+                  return Obx(() {
+                    final isSelected = selectedTime.value == time;
+                    return GestureDetector(
+                      onTap: () {
+                        selectedTime.value = time;
+                        useSameTimeAsLast.value = false;
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF05352F)
-                              : Colors.grey.shade300,
-                          width: isSelected ? 1.5 : 1,
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF05352F)
+                                : Colors.grey.shade300,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          time,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF2C3E3A),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        time,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF2C3E3A),
-                        ),
-                      ),
-                    ),
-                  );
-                });
-              }).toList(),
-            ),
+                    );
+                  });
+                }).toList(),
+              );
+            }),
 
             const SizedBox(height: 80),
           ],
@@ -441,6 +564,21 @@ class RebookDateTimeScreen extends StatelessWidget {
                 elevation: 0,
               ),
               onPressed: () {
+                final currentTimes = filteredAvailableTimes;
+                if (selectedTime.value.isEmpty ||
+                    !currentTimes.contains(selectedTime.value)) {
+                  Get.snackbar(
+                    'Select Time Slot',
+                    'Please select a valid upcoming time slot to continue.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.shade800,
+                    colorText: Colors.white,
+                    margin: const EdgeInsets.all(16),
+                    borderRadius: 12,
+                  );
+                  return;
+                }
+
                 Get.to(
                   () => RebookSummaryScreen(
                     salonId: salonId,

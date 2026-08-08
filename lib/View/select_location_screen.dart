@@ -21,8 +21,9 @@ class SelectLocationScreen extends StatelessWidget {
         : Get.put(AddressController());
     final locationController = Get.put(SelectLocationController());
 
-    final searchController =
-        TextEditingController(text: addressController.searchQuery.value);
+    final searchController = TextEditingController(
+      text: addressController.searchQuery.value,
+    );
 
     return Scaffold(
       backgroundColor: _bg,
@@ -154,45 +155,45 @@ class SelectLocationScreen extends StatelessWidget {
           // ── Saved Addresses Label ───────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Obx(
-              () {
-                final isSearching =
-                    addressController.searchQuery.value.trim().isNotEmpty;
-                final count = addressController.filteredAddresses.length;
+            child: Obx(() {
+              final isSearching = addressController.searchQuery.value
+                  .trim()
+                  .isNotEmpty;
+              final count = addressController.filteredAddresses.length;
 
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isSearching ? 'SEARCH RESULTS' : 'SAVED ADDRESSES',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _textMuted,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  if (isSearching)
                     Text(
-                      isSearching ? 'SEARCH RESULTS' : 'SAVED ADDRESSES',
+                      '$count found',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _textMuted,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: _green,
                       ),
                     ),
-                    if (isSearching)
-                      Text(
-                        '$count found',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _green,
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
+                ],
+              );
+            }),
           ),
           const SizedBox(height: 10),
 
           // ── Address List ────────────────────────────────────────────
           Expanded(
             child: Obx(() {
-              final isSearching =
-                  addressController.searchQuery.value.trim().isNotEmpty;
+              final isSearching = addressController.searchQuery.value
+                  .trim()
+                  .isNotEmpty;
               final addresses = addressController.filteredAddresses;
 
               if (addresses.isEmpty) {
@@ -460,9 +461,7 @@ class _AddressCard extends StatelessWidget {
                 GestureDetector(
                   onTap: onToggleFavorite,
                   child: Icon(
-                    address.isFavorite
-                        ? Icons.favorite
-                        : Icons.favorite_border,
+                    address.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: address.isFavorite ? Colors.redAccent : _textMuted,
                     size: 20,
                   ),
@@ -497,10 +496,7 @@ class _AddressCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(
-                Icons.edit_outlined,
-                color: _green,
-              ),
+              leading: const Icon(Icons.edit_outlined, color: _green),
               title: Text(
                 'Edit Address',
                 style: GoogleFonts.plusJakartaSans(

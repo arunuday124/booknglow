@@ -135,7 +135,9 @@ class SalonDetailController extends GetxController {
   }
 
   void _generateDates() {
-    final today = DateTime.now();
+    availableDates.clear();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     for (int i = 0; i < 7; i++) {
       availableDates.add(today.add(Duration(days: i)));
     }
@@ -337,20 +339,24 @@ class SalonDetailController extends GetxController {
         .toString();
     if (salonId.isEmpty) return;
 
-    _bookingsSubscription?.cancel();
-    _bookingsSubscription = FirebaseFirestore.instance
-        .collection('bookings')
-        .where('salonId', isEqualTo: salonId)
-        .snapshots()
-        .listen(
-      (snapshot) {
-        _salonBookingsDocs = snapshot.docs.map((d) => d.data()).toList();
-        _reevaluateLockedSlots();
-      },
-      onError: (e) {
-        debugPrint('❌ [SalonDetailController] Error listening to bookings: $e');
-      },
-    );
+    try {
+      _bookingsSubscription?.cancel();
+      _bookingsSubscription = FirebaseFirestore.instance
+          .collection('bookings')
+          .where('salonId', isEqualTo: salonId)
+          .snapshots()
+          .listen(
+        (snapshot) {
+          _salonBookingsDocs = snapshot.docs.map((d) => d.data()).toList();
+          _reevaluateLockedSlots();
+        },
+        onError: (e) {
+          debugPrint('❌ [SalonDetailController] Error listening to bookings: $e');
+        },
+      );
+    } catch (e) {
+      debugPrint('⚠️ [SalonDetailController] Firebase not initialized or unavailable: $e');
+    }
   }
 
   void _reevaluateLockedSlots() {
@@ -380,14 +386,45 @@ class SalonDetailController extends GetxController {
       }
     }
 
-    // If currently selected time is now locked, clear selection
-    if (selectedTime.isNotEmpty && lockedTimeSlots.contains(selectedTime.value)) {
+    // If currently selected time is now locked or not available, clear selection
+    if (selectedTime.isNotEmpty &&
+        (lockedTimeSlots.contains(selectedTime.value) ||
+            !filteredAvailableTimes.contains(selectedTime.value))) {
       selectedTime.value = '';
     }
   }
 
   bool isSlotLocked(String timeSlot) {
     return lockedTimeSlots.contains(timeSlot);
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  /// Returns time slots filtered by current time if today is selected,
+  /// or all available times for future dates.
+  List<String> get filteredAvailableTimes {
+    final date = selectedDate.value;
+    if (date == null) {
+      return availableTimes;
+    }
+
+    if (!_isToday(date)) {
+      return availableTimes;
+    }
+
+    final now = DateTime.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+
+    return availableTimes.where((slot) {
+      final slotMinutes = _parseToMinutes(slot);
+      if (slotMinutes == null) return true;
+      return slotMinutes > currentMinutes;
+    }).toList();
   }
 
   bool _isSameDate(String docDateRaw, DateTime target) {
@@ -449,16 +486,24 @@ class SalonDetailController extends GetxController {
 
   void selectDate(DateTime date) {
     selectedDate.value = date;
+    // Clear selected time if it's no longer available for the selected date
+    if (selectedTime.isNotEmpty &&
+        !filteredAvailableTimes.contains(selectedTime.value)) {
+      selectedTime.value = '';
+    }
   }
 
   void selectTime(String timeSlot) {
     if (isSlotLocked(timeSlot)) return;
+    if (!filteredAvailableTimes.contains(timeSlot)) return;
     selectedTime.value = timeSlot;
   }
 
   bool get isBookingValid {
     return selectedDate.value != null &&
         selectedTime.value.isNotEmpty &&
+        filteredAvailableTimes.contains(selectedTime.value) &&
+        !isSlotLocked(selectedTime.value) &&
         selectedServices.isNotEmpty;
   }
 
