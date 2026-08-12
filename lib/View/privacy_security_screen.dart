@@ -21,10 +21,7 @@ class PrivacySecurityScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Get.back(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: _deepGreen,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _deepGreen),
         ),
         title: Text(
           "Privacy & Security",
@@ -37,6 +34,88 @@ class PrivacySecurityScreen extends StatelessWidget {
           ),
         ),
         centerTitle: false,
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4F4),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _dangerRed.withAlpha(80)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _dangerRed.withAlpha(25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: _dangerRed,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Delete Account",
+                        style: GoogleFonts.plusJakartaSans(
+                          textStyle: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: _dangerRed,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Permanently erase all personal data & history",
+                        style: GoogleFonts.plusJakartaSans(
+                          textStyle: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9E3636),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _showDeleteAccountDialog,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    backgroundColor: _dangerRed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    "Delete",
+                    style: GoogleFonts.plusJakartaSans(
+                      textStyle: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -79,7 +158,8 @@ class PrivacySecurityScreen extends StatelessWidget {
                   _buildActionTile(
                     icon: Icons.download_for_offline_outlined,
                     title: "Request Data Copy",
-                    subtitle: "Export a copy of your account & appointment logs",
+                    subtitle:
+                        "Export a copy of your account & appointment logs",
                     onTap: () {
                       _showToast(
                         "Data Export Requested",
@@ -91,77 +171,69 @@ class PrivacySecurityScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
-            // Delete Account Danger Zone
+            // Security & Permissions Header
+            _buildSectionHeader("Security & Permissions"),
+            const SizedBox(height: 10),
+
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF4F4),
+                color: _cardBg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _dangerRed.withAlpha(80)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.02),
+                    blurRadius: 14,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _dangerRed.withAlpha(25),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.delete_forever_rounded,
-                      color: _dangerRed,
-                      size: 22,
-                    ),
+                  _buildActionTile(
+                    icon: Icons.lock_outline_rounded,
+                    title: "Data Encryption",
+                    subtitle:
+                        "256-bit SSL encryption active on all transactions",
+                    trailingText: "ACTIVE",
+                    onTap: () {
+                      _showToast(
+                        "Encryption Active",
+                        "All communication and booking transactions are protected with end-to-end encryption.",
+                      );
+                    },
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Delete BookN'Glow Account",
-                          style: GoogleFonts.plusJakartaSans(
-                            textStyle: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: _dangerRed,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "Permanently erase your account, history & points",
-                          style: GoogleFonts.plusJakartaSans(
-                            textStyle: const TextStyle(
-                              fontSize: 11.5,
-                              color: Color(0xFF9E3636),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Divider(height: 1, color: Color(0xFFFAF9F5)),
+                  _buildActionTile(
+                    icon: Icons.location_on_outlined,
+                    title: "Location Access",
+                    subtitle: "Used to find & suggest verified salons near you",
+                    onTap: () {
+                      _showToast(
+                        "Location Access",
+                        "You can manage location permissions in your device system settings.",
+                      );
+                    },
                   ),
-                  TextButton(
-                    onPressed: _showDeleteAccountDialog,
-                    child: Text(
-                      "Delete",
-                      style: GoogleFonts.plusJakartaSans(
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: _dangerRed,
-                        ),
-                      ),
-                    ),
+                  const Divider(height: 1, color: Color(0xFFFAF9F5)),
+                  _buildActionTile(
+                    icon: Icons.notifications_none_rounded,
+                    title: "Push Notifications",
+                    subtitle:
+                        "Receive booking confirmations and appointment reminders",
+                    onTap: () {
+                      _showToast(
+                        "Push Notifications",
+                        "Notification settings can be configured in your device preferences.",
+                      );
+                    },
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -211,10 +283,7 @@ class PrivacySecurityScreen extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: GoogleFonts.plusJakartaSans(
-          textStyle: const TextStyle(
-            fontSize: 11.5,
-            color: _mutedTeal,
-          ),
+          textStyle: const TextStyle(fontSize: 11.5, color: _mutedTeal),
         ),
       ),
       trailing: Row(
@@ -233,14 +302,13 @@ class PrivacySecurityScreen extends StatelessWidget {
             ),
             const SizedBox(width: 4),
           ],
-          const Icon(
-            Icons.chevron_right,
-            color: _mutedTeal,
-            size: 18,
-          ),
+          const Icon(Icons.chevron_right, color: _mutedTeal, size: 18),
         ],
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 6.0,
+      ),
     );
   }
 
@@ -461,7 +529,9 @@ class PrivacySecurityScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: _dangerRed,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               Get.back();

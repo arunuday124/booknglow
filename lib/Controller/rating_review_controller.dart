@@ -29,15 +29,16 @@ class RatingReviewController extends GetxController {
     required String salonId,
     required String salonName,
     required String serviceName,
-    void Function(double rating)? onSuccess,
+    String? bookingId,
+    void Function(double rating, String review)? onSuccess,
   }) async {
-    final reviewText = reviewController.text.trim();
-    if (reviewText.isEmpty) {
+    final submittedRating = rating.value;
+    if (submittedRating <= 0) {
       Get.snackbar(
-        'Required',
-        'Please enter a brief review message.',
+        'Rating Required',
+        'Please select a star rating (1 to 5 stars) before submitting.',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.redAccent,
+        backgroundColor: Colors.amber.shade800,
         colorText: Colors.white,
         borderRadius: 12,
         margin: const EdgeInsets.all(16),
@@ -46,21 +47,26 @@ class RatingReviewController extends GetxController {
       return;
     }
 
+    final reviewText = reviewController.text.trim();
+
     isSubmitting.value = true;
 
-    final submittedRating = rating.value;
     final result = await ReviewService.submitReview(
       salonId: salonId,
       salonName: salonName,
       serviceName: serviceName,
       ratings: submittedRating,
       review: reviewText,
+      bookingId: bookingId,
     );
 
     isSubmitting.value = false;
 
     if (result == 'SUCCESS') {
-      onSuccess?.call(submittedRating);
+      onSuccess?.call(
+        submittedRating,
+        reviewText.isNotEmpty ? reviewText : 'Rated ${submittedRating.toInt()} stars',
+      );
       reset();
 
       if (context != null && context.mounted) {
@@ -82,7 +88,7 @@ class RatingReviewController extends GetxController {
     } else if (result == 'ALREADY_SUBMITTED') {
       Get.snackbar(
         'Already Submitted',
-        'You have already submitted a review for this service.',
+        'You have already submitted a review for this booking.',
         snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFC53030),
         colorText: Colors.white,

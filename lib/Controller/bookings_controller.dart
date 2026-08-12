@@ -20,6 +20,9 @@ class BookingsController extends GetxController {
   /// Loaded from Firestore on fetch and updated locally after submission.
   final RxMap<String, double> userRatings = <String, double>{}.obs;
 
+  /// Maps bookingId -> written review text once submitted.
+  final RxMap<String, String> userReviews = <String, String>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -95,7 +98,8 @@ class BookingsController extends GetxController {
         }
 
         if (parsedServices.isEmpty) {
-          final fallbackName = doc['serviceName']?.toString() ??
+          final fallbackName =
+              doc['serviceName']?.toString() ??
               doc['service']?.toString() ??
               doc['name']?.toString() ??
               'Salon Service';
@@ -109,22 +113,34 @@ class BookingsController extends GetxController {
         }
 
         final serviceNames = parsedServices
-            .map((s) =>
-                s['serviceName']?.toString() ??
-                s['name']?.toString() ??
-                s['title']?.toString() ??
-                'Service')
+            .map(
+              (s) =>
+                  s['serviceName']?.toString() ??
+                  s['name']?.toString() ??
+                  s['title']?.toString() ??
+                  'Service',
+            )
             .join(', ');
 
         final paymentMethod = doc['paymentMethod']?.toString() ?? 'card';
 
         // Look up transaction from pre-fetched map — no extra query
         final tx = txMap[bookingId];
-        final paymentStatus = tx?['paymentStatus']?.toString() ??
+        final paymentStatus =
+            tx?['paymentStatus']?.toString() ??
             (paymentMethod.toLowerCase().trim().contains('cash')
                 ? 'pending'
                 : 'completed');
         final transactionId = tx?['transactionId']?.toString() ?? '';
+
+        // Read direct rating and review if saved in booking doc
+        if (doc['rating'] is num && (doc['rating'] as num) > 0) {
+          userRatings[bookingId] = (doc['rating'] as num).toDouble();
+        }
+        if (doc['review'] != null &&
+            doc['review'].toString().trim().isNotEmpty) {
+          userReviews[bookingId] = doc['review'].toString().trim();
+        }
 
         final formattedMap = <String, dynamic>{
           'id': bookingId,
@@ -144,8 +160,9 @@ class BookingsController extends GetxController {
           '_serviceNames': serviceNames, // temp key for review lookup below
         };
 
-        final status =
-            (doc['bookingStatus']?.toString() ?? '').toLowerCase().trim();
+        final status = (doc['bookingStatus']?.toString() ?? '')
+            .toLowerCase()
+            .trim();
         if (status == 'completed' ||
             status == 'cancelled' ||
             status == 'canceled') {
@@ -156,59 +173,47 @@ class BookingsController extends GetxController {
         }
       }
 
-      // ── Batch query 2: fetch ALL reviews for history bookings in one shot ──
+      // ── Batch query 2: fetch ALL reviews for the user in one shot ──
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-      if (userId.isNotEmpty && historyBookingIds.isNotEmpty) {
-        // Build a lookup: salonId+serviceName -> rating
-        // We query by userId only (no compound whereIn on multiple fields),
-        // then filter locally by salonId+serviceName match.
-        final historyItems = history.toList();
-        final salonIds = historyItems
-            .map((b) => b['salonId']?.toString() ?? '')
-            .where((id) => id.isNotEmpty)
-            .toSet()
-            .toList();
+      if (userId.isNotEmpty) {
+        try {
+          final reviewSnap = await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('userId', isEqualTo: userId)
+              .get();
 
-        if (salonIds.isNotEmpty) {
-          for (int i = 0; i < salonIds.length; i += 30) {
-            final chunk = salonIds.sublist(
-              i,
-              i + 30 > salonIds.length ? salonIds.length : i + 30,
-            );
-            final reviewSnap = await FirebaseFirestore.instance
-                .collection('reviews')
-                .where('userId', isEqualTo: userId)
-                .where('salonId', whereIn: chunk)
-                .get();
+          for (var doc in reviewSnap.docs) {
+            final data = doc.data();
+            final rBid = data['bookingId']?.toString() ?? '';
+            final sid = data['salonId']?.toString() ?? '';
+            final sn = data['serviceName']?.toString() ?? '';
+            final r = data['ratings'];
+            final rev = data['review']?.toString() ?? '';
 
-            // Build a map: "salonId|serviceName" -> rating
-            final reviewMap = <String, double>{};
-            for (var doc in reviewSnap.docs) {
-              final data = doc.data();
-              final sid = data['salonId']?.toString() ?? '';
-              final sn = data['serviceName']?.toString() ?? '';
-              final r = data['ratings'];
-              if (sid.isNotEmpty && sn.isNotEmpty && r is num) {
-                reviewMap['$sid|$sn'] = r.toDouble();
+            if (r is num && r > 0) {
+              final ratingVal = r.toDouble();
+              // 1. Direct bookingId match
+              if (rBid.isNotEmpty) {
+                userRatings[rBid] = ratingVal;
+                if (rev.isNotEmpty) userReviews[rBid] = rev;
               }
-            }
 
-            // Match to history bookings and populate userRatings
-            for (var b in history) {
-              final bid = b['id']?.toString() ?? '';
-              if (bid.isEmpty) continue;
-              final sid = b['salonId']?.toString() ?? '';
-              final serviceNamesStr = b['_serviceNames']?.toString() ?? '';
-              final firstService = serviceNamesStr.isNotEmpty
-                  ? serviceNamesStr.split(', ').first
-                  : '';
-              final key = '$sid|$firstService';
-              final rating = reviewMap[key];
-              if (rating != null) {
-                userRatings[bid] = rating;
+              // 2. Salon + service fallback match for history bookings
+              for (var b in history) {
+                final bid = b['id']?.toString() ?? '';
+                if (bid.isEmpty) continue;
+                final bSid = b['salonId']?.toString() ?? '';
+                final bSn = b['_serviceNames']?.toString() ?? '';
+                if (bSid == sid &&
+                    (bSn.contains(sn) || sn.contains(bSn) || sn == bSn)) {
+                  userRatings[bid] ??= ratingVal;
+                  if (rev.isNotEmpty) userReviews[bid] ??= rev;
+                }
               }
             }
           }
+        } catch (rErr) {
+          debugPrint('⚠️ [BookingsController] Error fetching reviews: $rErr');
         }
       }
 
@@ -223,9 +228,7 @@ class BookingsController extends GetxController {
       upcomingBookings.assignAll(upcoming);
       historyBookings.assignAll(history);
     } catch (e, stack) {
-      debugPrint(
-        '❌ [BookingsController] Error fetching bookings: $e\n$stack',
-      );
+      debugPrint('❌ [BookingsController] Error fetching bookings: $e\n$stack');
     } finally {
       isLoading.value = false;
     }
@@ -241,14 +244,20 @@ class BookingsController extends GetxController {
   }
 
   /// Called by the UI after the user successfully submits a review.
-  /// Stores the rating locally so the Rate button is immediately replaced by stars.
-  void setLocalRating(String bookingId, double rating) {
+  /// Stores the rating and review locally so the Rate button is immediately replaced by stars and review quote.
+  void setLocalRating(String bookingId, double rating, [String? review]) {
     userRatings[bookingId] = rating;
+    if (review != null && review.trim().isNotEmpty) {
+      userReviews[bookingId] = review.trim();
+    }
   }
 
   /// Marks a pending cash payment as completed in Firestore transactions collection
   /// and updates local state.
-  Future<bool> markPaymentAsComplete(String bookingId, {String? transactionId}) async {
+  Future<bool> markPaymentAsComplete(
+    String bookingId, {
+    String? transactionId,
+  }) async {
     try {
       final success = await TransactionService.markPaymentAsComplete(
         transactionId: transactionId,
@@ -273,7 +282,9 @@ class BookingsController extends GetxController {
         return true;
       }
     } catch (e, stack) {
-      debugPrint('❌ [BookingsController] Error completing cash payment: $e\n$stack');
+      debugPrint(
+        '❌ [BookingsController] Error completing cash payment: $e\n$stack',
+      );
     }
     return false;
   }
@@ -334,6 +345,7 @@ class BookingsController extends GetxController {
         'paymentMethod': paymentMethod,
         'paymentStatus': initialPaymentStatus,
         'transactionId': '',
+        'isLocked': false,
       });
       selectedTab.value = 0;
       return true;
@@ -343,4 +355,3 @@ class BookingsController extends GetxController {
     }
   }
 }
-

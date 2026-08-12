@@ -56,6 +56,7 @@ class BookingService {
         'bookingStatus': bookingStatus,
         'createdAt': Timestamp.now(),
         'date': date,
+        'isLocked': false,
         'paymentMethod': paymentMethod,
         'salonId': salonId,
         'salonName': salonName,
@@ -96,7 +97,9 @@ class BookingService {
           '✅ [BookingService] Transaction document created with ID: $txId',
         );
       } catch (txErr) {
-        debugPrint('⚠️ [BookingService] Error creating transaction document: $txErr');
+        debugPrint(
+          '⚠️ [BookingService] Error creating transaction document: $txErr',
+        );
       }
 
       // Create staged notification document in 'notification' collection (sentAt = null until confirmed)
@@ -122,7 +125,9 @@ class BookingService {
           '✅ [BookingService] Staged notification created with scheduledAt: $scheduledAtTimestamp for bookingId: ${docRef.id}',
         );
       } catch (nErr) {
-        debugPrint('⚠️ [BookingService] Error creating staged notification: $nErr');
+        debugPrint(
+          '⚠️ [BookingService] Error creating staged notification: $nErr',
+        );
       }
 
       return docRef.id;
@@ -152,10 +157,29 @@ class BookingService {
       } else {
         // 2. Parse human-formatted date strings like "Mon, Aug 3, 2026", "Aug 3, 2026", "3 Aug 2026"
         const monthMap = {
-          'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-          'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
-          'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
-          'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+          'jan': 1,
+          'feb': 2,
+          'mar': 3,
+          'apr': 4,
+          'may': 5,
+          'jun': 6,
+          'jul': 7,
+          'aug': 8,
+          'sep': 9,
+          'oct': 10,
+          'nov': 11,
+          'dec': 12,
+          'january': 1,
+          'february': 2,
+          'march': 3,
+          'april': 4,
+          'june': 6,
+          'july': 7,
+          'august': 8,
+          'september': 9,
+          'october': 10,
+          'november': 11,
+          'december': 12,
         };
 
         // Extract year (4 digits starting with 20)
@@ -175,14 +199,19 @@ class BookingService {
 
         // Extract day number (1 or 2 digits)
         final dateWithoutYear = dateStr.replaceAll(RegExp(r'\b20\d{2}\b'), '');
-        final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(dateWithoutYear);
+        final dayMatch = RegExp(
+          r'\b([1-9]|[12]\d|3[01])\b',
+        ).firstMatch(dateWithoutYear);
         if (dayMatch != null) {
           day = int.parse(dayMatch.group(1)!);
         }
       }
 
       // 3. Parse timeStr (e.g. "6:00 PM", "06:00 PM", "18:00")
-      final timeRegExp = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)?', caseSensitive: false);
+      final timeRegExp = RegExp(
+        r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+        caseSensitive: false,
+      );
       final timeMatch = timeRegExp.firstMatch(timeStr);
       if (timeMatch != null) {
         hour = int.parse(timeMatch.group(1)!);

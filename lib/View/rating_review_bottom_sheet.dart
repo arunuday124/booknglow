@@ -7,23 +7,25 @@ class RatingReviewBottomSheet extends StatelessWidget {
   final String salonId;
   final String salonName;
   final String serviceName;
+  final String? bookingId;
+  final void Function(double rating, String review)? onSuccess;
 
   const RatingReviewBottomSheet({
     super.key,
     required this.salonId,
     required this.salonName,
     required this.serviceName,
+    this.bookingId,
     this.onSuccess,
   });
-
-  final void Function(double rating)? onSuccess;
 
   static Future<void> show(
     BuildContext context, {
     required String salonId,
     required String salonName,
     required String serviceName,
-    void Function(double rating)? onSuccess,
+    String? bookingId,
+    void Function(double rating, String review)? onSuccess,
   }) async {
     await showModalBottomSheet(
       context: context,
@@ -37,6 +39,7 @@ class RatingReviewBottomSheet extends StatelessWidget {
           salonId: salonId,
           salonName: salonName,
           serviceName: serviceName,
+          bookingId: bookingId,
           onSuccess: onSuccess,
         ),
       ),
@@ -211,6 +214,7 @@ class RatingReviewBottomSheet extends StatelessWidget {
                           salonId: salonId,
                           salonName: salonName,
                           serviceName: serviceName,
+                          bookingId: bookingId,
                           onSuccess: onSuccess,
                         ),
                 style: ElevatedButton.styleFrom(

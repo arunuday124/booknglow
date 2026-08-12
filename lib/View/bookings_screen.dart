@@ -569,19 +569,30 @@ class HistoryBookingsTab extends StatelessWidget {
                                             // Show filled stars for the submitted rating
                                             return Row(
                                               mainAxisSize: MainAxisSize.min,
-                                              children: List.generate(5, (i) {
-                                                return Icon(
-                                                  i < existingRating.round()
-                                                      ? Icons.star_rounded
-                                                      : Icons.star_outline_rounded,
-                                                  size: 18,
-                                                  color: const Color(0xFFFFB800),
-                                                );
-                                              }),
+                                              children: [
+                                                ...List.generate(5, (i) {
+                                                  return Icon(
+                                                    i < existingRating.round()
+                                                        ? Icons.star_rounded
+                                                        : Icons.star_outline_rounded,
+                                                    size: 17,
+                                                    color: const Color(0xFFFFB800),
+                                                  );
+                                                }),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${existingRating.toStringAsFixed(1)} ★',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: const Color(0xFFD97706),
+                                                  ),
+                                                ),
+                                              ],
                                             );
                                           }
 
-                                          // Show Rate button if not yet reviewed
+                                          // Show Rate & Review button if not yet reviewed
                                           return InkWell(
                                             onTap: () {
                                               RatingReviewBottomSheet.show(
@@ -598,8 +609,9 @@ class HistoryBookingsTab extends StatelessWidget {
                                                     booking['service']
                                                         ?.toString() ??
                                                     'Salon Service',
-                                                onSuccess: (rating) {
-                                                  controller.setLocalRating(bookingId, rating);
+                                                bookingId: bookingId,
+                                                onSuccess: (rating, review) {
+                                                  controller.setLocalRating(bookingId, rating, review);
                                                 },
                                               );
                                             },
@@ -626,7 +638,7 @@ class HistoryBookingsTab extends StatelessWidget {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    "Rate",
+                                                    "Rate & Review",
                                                     style: GoogleFonts.plusJakartaSans(
                                                       fontSize: 11.5,
                                                       fontWeight: FontWeight.bold,
@@ -640,6 +652,48 @@ class HistoryBookingsTab extends StatelessWidget {
                                         }),
                                       ],
                                     ),
+                                    Obx(() {
+                                      final bookingId = booking['id']?.toString() ?? '';
+                                      final userReview = controller.userReviews[bookingId];
+                                      if (userReview != null && userReview.trim().isNotEmpty) {
+                                        return Container(
+                                          margin: const EdgeInsets.only(top: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF6F8F7),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: const Color(0xFFE2E8F0),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Icon(
+                                                Icons.format_quote_rounded,
+                                                size: 14,
+                                                color: Color(0xFF05352F),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  userReview,
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11.5,
+                                                    fontStyle: FontStyle.italic,
+                                                    color: const Color(0xFF4A5568),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    }),
                                   ],
                                 ),
                               ),
