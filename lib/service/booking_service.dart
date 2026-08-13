@@ -260,4 +260,68 @@ class BookingService {
 
     return list;
   }
+
+  // In-memory cache for salon booked slots: salonId -> list of booking maps
+  static final Map<String, List<Map<String, dynamic>>> _cachedSalonBookings = {};
+  static final Map<String, DateTime> _cachedSalonBookingsTimestamp = {};
+
+  /// Clears the in-memory salon bookings cache
+  static void clearSalonBookingsCache([String? salonId]) {
+    if (salonId != null) {
+      _cachedSalonBookings.remove(salonId);
+      _cachedSalonBookingsTimestamp.remove(salonId);
+    } else {
+      _cachedSalonBookings.clear();
+      _cachedSalonBookingsTimestamp.clear();
+    }
+  }
+
+  /// One-shot fetch of all bookings for a specific salon with in-memory cache (5-minute TTL).
+  /// If forceRefresh is false and data is cached recently, returns cache with 0 Firestore read calls.
+  static Future<List<Map<String, dynamic>>> getBookingsForSalon(
+    String salonId, {
+    bool forceRefresh = false,
+  }) async {
+    if (salonId.isEmpty) return [];
+
+    final cached = _cachedSalonBookings[salonId];
+    final cachedTime = _cachedSalonBookingsTimestamp[salonId];
+
+    // Return cached list if available and within 5 minutes, unless forceRefresh is requested
+    if (!forceRefresh &&
+        cached != null &&
+        cachedTime != null &&
+        DateTime.now().difference(cachedTime).inMinutes < 5) {
+      debugPrint(
+        '⚡ [BookingService] Returning cached bookings for salon $salonId without DB call (${cached.length} records).',
+      );
+      return cached;
+    }
+
+    try {
+      debugPrint(
+        '🔥 [BookingService] Fetching fresh bookings for salon $salonId from Firestore...',
+      );
+      final snapshot =
+          await _bookingsCol.where('salonId', isEqualTo: salonId).get();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      _cachedSalonBookings[salonId] = list;
+      _cachedSalonBookingsTimestamp[salonId] = DateTime.now();
+
+      debugPrint(
+        '✅ [BookingService] Cached ${list.length} bookings for salon $salonId.',
+      );
+      return list;
+    } catch (e) {
+      debugPrint(
+        '❌ [BookingService] Error fetching bookings for salon $salonId: $e',
+      );
+      return cached ?? [];
+    }
+  }
 }

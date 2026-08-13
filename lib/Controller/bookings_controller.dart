@@ -39,7 +39,12 @@ class BookingsController extends GetxController {
       final List<Map<String, dynamic>> upcoming = [];
       final List<Map<String, dynamic>> history = [];
 
+      final Map<String, double> newRatings = {};
+      final Map<String, String> newReviews = {};
+
       if (list.isEmpty) {
+        userRatings.assignAll(newRatings);
+        userReviews.assignAll(newReviews);
         upcomingBookings.assignAll(upcoming);
         historyBookings.assignAll(history);
         return;
@@ -133,15 +138,6 @@ class BookingsController extends GetxController {
                 : 'completed');
         final transactionId = tx?['transactionId']?.toString() ?? '';
 
-        // Read direct rating and review if saved in booking doc
-        if (doc['rating'] is num && (doc['rating'] as num) > 0) {
-          userRatings[bookingId] = (doc['rating'] as num).toDouble();
-        }
-        if (doc['review'] != null &&
-            doc['review'].toString().trim().isNotEmpty) {
-          userReviews[bookingId] = doc['review'].toString().trim();
-        }
-
         final formattedMap = <String, dynamic>{
           'id': bookingId,
           'salonId': doc['salonId']?.toString() ?? '',
@@ -157,7 +153,6 @@ class BookingsController extends GetxController {
           'paymentMethod': paymentMethod,
           'paymentStatus': paymentStatus,
           'transactionId': transactionId,
-          '_serviceNames': serviceNames, // temp key for review lookup below
         };
 
         final status = (doc['bookingStatus']?.toString() ?? '')
@@ -185,30 +180,14 @@ class BookingsController extends GetxController {
           for (var doc in reviewSnap.docs) {
             final data = doc.data();
             final rBid = data['bookingId']?.toString() ?? '';
-            final sid = data['salonId']?.toString() ?? '';
-            final sn = data['serviceName']?.toString() ?? '';
             final r = data['ratings'];
             final rev = data['review']?.toString() ?? '';
 
-            if (r is num && r > 0) {
+            if (r is num && r > 0 && rBid.isNotEmpty) {
               final ratingVal = r.toDouble();
-              // 1. Direct bookingId match
-              if (rBid.isNotEmpty) {
-                userRatings[rBid] = ratingVal;
-                if (rev.isNotEmpty) userReviews[rBid] = rev;
-              }
-
-              // 2. Salon + service fallback match for history bookings
-              for (var b in history) {
-                final bid = b['id']?.toString() ?? '';
-                if (bid.isEmpty) continue;
-                final bSid = b['salonId']?.toString() ?? '';
-                final bSn = b['_serviceNames']?.toString() ?? '';
-                if (bSid == sid &&
-                    (bSn.contains(sn) || sn.contains(bSn) || sn == bSn)) {
-                  userRatings[bid] ??= ratingVal;
-                  if (rev.isNotEmpty) userReviews[bid] ??= rev;
-                }
+              newRatings[rBid] = ratingVal;
+              if (rev.isNotEmpty) {
+                newReviews[rBid] = rev;
               }
             }
           }
@@ -217,13 +196,8 @@ class BookingsController extends GetxController {
         }
       }
 
-      // Clean up temporary _serviceNames key
-      for (var b in history) {
-        b.remove('_serviceNames');
-      }
-      for (var b in upcoming) {
-        b.remove('_serviceNames');
-      }
+      userRatings.assignAll(newRatings);
+      userReviews.assignAll(newReviews);
 
       upcomingBookings.assignAll(upcoming);
       historyBookings.assignAll(history);

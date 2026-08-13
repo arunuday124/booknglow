@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,98 @@ class SalonDetailBottomSheet extends StatelessWidget {
   String _getWeekdayName(DateTime date) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days[date.weekday - 1];
+  }
+
+  Widget _buildShopImage(String rawImage) {
+    final imageStr = rawImage.trim();
+
+    if (imageStr.isEmpty) {
+      return _buildImagePlaceholder();
+    }
+
+    if (imageStr.startsWith('http://') || imageStr.startsWith('https://')) {
+      return Image.network(
+        imageStr,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 180,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: double.infinity,
+            height: 180,
+            color: const Color(0xFF05352F).withValues(alpha: 0.08),
+            child: const Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF05352F),
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+      );
+    } else if (imageStr.startsWith('assets/')) {
+      return Image.asset(
+        imageStr,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 180,
+        errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+      );
+    } else if (File(imageStr).existsSync()) {
+      return Image.file(
+        File(imageStr),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 180,
+        errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+      );
+    }
+
+    return _buildImagePlaceholder();
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF05352F), Color(0xFF0A4D45)],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.spa_outlined,
+              color: Color(0xFFE8D5AF),
+              size: 48,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Book'N'Glow Experience",
+              style: GoogleFonts.playfairDisplay(
+                textStyle: const TextStyle(
+                  color: Color(0xFFFAF9F5),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -48,6 +141,14 @@ class SalonDetailBottomSheet extends StatelessWidget {
     final String phone = salonData['phone']?.toString() ?? '';
     final String ownerName = salonData['ownerName']?.toString() ?? '';
 
+    final String rawImage = (salonData['shopImage'] ??
+            salonData['image'] ??
+            salonData['shop_image'] ??
+            salonData['photoUrl'] ??
+            '')
+        .toString()
+        .trim();
+
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         controller.resetSelections();
@@ -66,58 +167,11 @@ class SalonDetailBottomSheet extends StatelessWidget {
               Stack(
                 alignment: Alignment.topCenter,
                 children: [
-                  // 1. Shop Image Banner
-                  Container(
-                    height: 160,
+                  // 1. Shop Image Banner at top of bottom sheet
+                  SizedBox(
+                    height: 180,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5EFE0),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF05352F).withValues(alpha: 0.12),
-                          const Color(0xFFE8D5AF).withValues(alpha: 0.3),
-                        ],
-                      ),
-                    ),
-                    child: Image.asset(
-                      salonData['image'] ?? 'assets/images/salon_aura.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFF05352F), Color(0xFF0A4D45)],
-                          ),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.spa_outlined,
-                                color: Color(0xFFE8D5AF),
-                                size: 48,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Book'N'Glow Experience",
-                                style: GoogleFonts.playfairDisplay(
-                                  textStyle: const TextStyle(
-                                    color: Color(0xFFFAF9F5),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: _buildShopImage(rawImage),
                   ),
 
                   // Drag handle bar
@@ -301,7 +355,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       Divider(
-                        color: const Color(0xFFE8D5AF).withOpacity(0.3),
+                        color: const Color(0xFFE8D5AF).withValues(alpha: 0.3),
                         height: 1,
                       ),
                       const SizedBox(height: 20),
@@ -352,7 +406,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                           ? const Color(0xFF05352F)
                                           : const Color(
                                               0xFFE8D5AF,
-                                            ).withOpacity(0.3),
+                                            ).withValues(alpha: 0.3),
                                       width: 1,
                                     ),
                                     boxShadow: [
@@ -360,7 +414,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                         color: isSelected
                                             ? const Color(
                                                 0xFF05352F,
-                                              ).withOpacity(0.15)
+                                              ).withValues(alpha: 0.15)
                                             : const Color.fromRGBO(
                                                 0,
                                                 0,
@@ -567,7 +621,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       Divider(
-                        color: const Color(0xFFE8D5AF).withOpacity(0.3),
+                        color: const Color(0xFFE8D5AF).withValues(alpha: 0.3),
                         height: 1,
                       ),
                       const SizedBox(height: 20),
@@ -606,10 +660,10 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isSelected
-                                      ? const Color(0xFF9E7E45).withOpacity(0.5)
+                                      ? const Color(0xFF9E7E45).withValues(alpha: 0.5)
                                       : const Color(
                                           0xFFE8D5AF,
-                                        ).withOpacity(0.2),
+                                        ).withValues(alpha: 0.2),
                                   width: 1,
                                 ),
                               ),
@@ -666,7 +720,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF05352F).withOpacity(0.04),
+                      color: const Color(0xFF05352F).withValues(alpha: 0.04),
                       blurRadius: 16,
                       offset: const Offset(0, -8),
                     ),

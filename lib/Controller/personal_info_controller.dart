@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../service/bunny_cdn_service.dart';
 import '../service/user_service.dart';
 
 class PersonalInfoController extends GetxController {
@@ -17,6 +19,7 @@ class PersonalInfoController extends GetxController {
   final RxString nameInitials = '?'.obs;
   final RxnString selectedImagePath = RxnString();
   final RxnString currentPhotoUrl = RxnString();
+  final RxnString initialPhotoUrl = RxnString();
 
   @override
   void onInit() {
@@ -64,6 +67,7 @@ class PersonalInfoController extends GetxController {
       currentPhotoUrl.value = user.photoURL;
     }
 
+    initialPhotoUrl.value = currentPhotoUrl.value;
     _updateInitials(nameController.text);
   }
 
@@ -156,24 +160,36 @@ class PersonalInfoController extends GetxController {
 
       String? photoToSave = currentPhotoUrl.value;
       if (selectedImagePath.value != null) {
-        photoToSave = selectedImagePath.value;
-        currentPhotoUrl.value = photoToSave;
+        // Compress and upload to BunnyCDN storage with automated cleanup of previous photo
+        final uploadedCdnUrl = await BunnyCdnService.uploadProfileImage(
+          imageFile: File(selectedImagePath.value!),
+          userId: user.uid,
+          oldImageUrl: initialPhotoUrl.value,
+        );
+
+        if (uploadedCdnUrl != null && uploadedCdnUrl.isNotEmpty) {
+          photoToSave = uploadedCdnUrl;
+          currentPhotoUrl.value = photoToSave;
+          initialPhotoUrl.value = photoToSave;
+          selectedImagePath.value = null;
+        }
+      } else if (currentPhotoUrl.value == null && initialPhotoUrl.value != null) {
+        // User removed photo -> delete old image from BunnyCDN storage
+        await BunnyCdnService.deleteImageByUrl(initialPhotoUrl.value);
+        initialPhotoUrl.value = null;
+        photoToSave = null;
       }
 
       // Update FirebaseAuth user display name & photo URL
       await user.updateDisplayName(newName);
-      if (photoToSave != null) {
-        await user.updatePhotoURL(photoToSave);
-      }
+      await user.updatePhotoURL(photoToSave);
 
       // Update Firestore DB document & memory cache
       final fieldsToUpdate = <String, dynamic>{
         'name': newName,
         'phone': newPhoneInt,
+        'profileImages': photoToSave ?? '',
       };
-      if (photoToSave != null) {
-        fieldsToUpdate['profileImages'] = photoToSave;
-      }
 
       await UserService.updateUserFields(user.uid, fieldsToUpdate);
 

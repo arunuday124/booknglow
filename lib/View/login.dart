@@ -115,305 +115,128 @@ class Login extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 20),
 
-                      // Email / Phone Field
-                      Text(
-                        "EMAIL",
-                        style: GoogleFonts.plusJakartaSans(
-                          textStyle: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4C6B64),
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      TextFormField(
-                        controller: controller.emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: GoogleFonts.plusJakartaSans(
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            color: Color(0xFF2C3E3A),
-                          ),
-                        ),
-                        decoration: InputDecoration(
-                          hintText: "e.g. example@gmail.com",
-                          hintStyle: GoogleFonts.plusJakartaSans(
-                            textStyle: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 14,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                          ),
-                          isDense: true,
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 1.2,
-                            ),
-                          ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Color(0xFF05352F),
-                              width: 1.5,
-                            ),
-                          ),
+                      // Salon / Barber Illustration
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16.0),
+                        child: Image.asset(
+                          "assets/images/login_illustration.png",
+                          width: double.infinity,
+                          fit: BoxFit.contain,
                         ),
                       ),
 
                       const SizedBox(height: 28),
-                      // Password Field Header Row
-                      Text(
-                        "PASSWORD",
-                        style: GoogleFonts.plusJakartaSans(
-                          textStyle: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4C6B64),
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
 
-                      // Obscure password input
-                      Obx(
-                        () => TextFormField(
-                          controller: controller.passwordController,
-                          obscureText: controller.isObscure.value,
-                          style: GoogleFonts.plusJakartaSans(
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              color: Color(0xFF2C3E3A),
-                            ),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: "• • • • • • • •",
-                            hintStyle: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 14,
-                              letterSpacing: 2.0,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                            ),
-                            isDense: true,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                controller.isObscure.value
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: Colors.grey.shade400,
-                                size: 18,
-                              ),
-                              onPressed: controller.togglePasswordVisibility,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                                width: 1.2,
-                              ),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0xFF05352F),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: controller.forgotPassword,
-                          child: Text(
-                            "Forgot Password?",
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF9E7E45), // Warm luxury gold
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Sign In Button
+                      // Google login button
                       SizedBox(
                         width: double.infinity,
                         height: 52,
-                        child: Obx(() {
-                          return ElevatedButton(
-                            onPressed: controller.isLoading.value
+                        child: Obx(
+                          () => InkWell(
+                            onTap: controller.isGoogleLoading.value
                                 ? null
-                                : controller.login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(
-                                0xFF05352F,
-                              ), // Dark Teal
-                              disabledBackgroundColor: const Color.fromRGBO(
-                                5,
-                                53,
-                                47,
-                                0.7,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: controller.isLoading.value
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFFE8D5AF),
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    "SIGN IN",
-                                    style: GoogleFonts.plusJakartaSans(
-                                      textStyle: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFE8D5AF), // Gold color
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                          );
-                        }),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Divider OR CONTINUE WITH
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey.shade200,
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            child: Text(
-                              "OR CONTINUE WITH",
-                              style: GoogleFonts.plusJakartaSans(
-                                textStyle: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade400,
-                                  letterSpacing: 0.8,
+                                : controller.loginWithGoogle,
+                            borderRadius: BorderRadius.circular(10.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1.2,
                                 ),
+                                borderRadius: BorderRadius.circular(10.0),
                               ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey.shade200,
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // Social Media Login Buttons
-                      Row(
-                        children: [
-                          // Google login button
-                          Expanded(
-                            child: Obx(
-                              () => InkWell(
-                                onTap: controller.isGoogleLoading.value
-                                    ? null
-                                    : controller.loginWithGoogle,
-                                borderRadius: BorderRadius.circular(8.0),
-                                child: Container(
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey.shade200,
-                                      width: 1.2,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: controller.isGoogleLoading.value
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Color(0xFF05352F),
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : Image.asset(
+                              alignment: Alignment.center,
+                              child: controller.isGoogleLoading.value
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFF05352F),
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
                                           "assets/images/google.png",
                                           height: 22,
                                           width: 22,
                                           fit: BoxFit.contain,
                                         ),
-                                ),
-                              ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          "Continue with Google",
+                                          style: GoogleFonts.plusJakartaSans(
+                                            textStyle: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF05352F),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                        ),
+                      ),
 
-                          // Apple login button
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Apple Sign-In is coming soon!',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: const Color(0xFF05352F),
-                                  colorText: Colors.white,
-                                  margin: const EdgeInsets.all(16),
-                                  borderRadius: 12,
-                                  duration: const Duration(seconds: 2),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(8.0),
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                    width: 1.2,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                alignment: Alignment.center,
-                                child: Image.asset(
+                      const SizedBox(height: 14),
+
+                      // Apple login button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: InkWell(
+                          onTap: () {
+                            Get.snackbar(
+                              'Coming Soon',
+                              'Apple Sign-In is coming soon!',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF05352F),
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(16),
+                              borderRadius: 12,
+                              duration: const Duration(seconds: 2),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1.2,
+                              ),
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
                                   "assets/images/apple.png",
                                   height: 22,
                                   width: 22,
                                   fit: BoxFit.contain,
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "Continue with Apple",
+                                  style: GoogleFonts.plusJakartaSans(
+                                    textStyle: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF05352F),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
 
                       const SizedBox(height: 36),

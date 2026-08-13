@@ -26,9 +26,7 @@ class ReviewService {
             .limit(1)
             .get();
 
-        if (bookingReviewSnap.docs.isNotEmpty) {
-          return true;
-        }
+        return bookingReviewSnap.docs.isNotEmpty;
       }
 
       if (salonId.isNotEmpty && serviceName.isNotEmpty) {
@@ -105,19 +103,6 @@ class ReviewService {
 
       debugPrint('🔥 [ReviewService] Writing review to Firestore: $reviewData');
       await _db.collection('reviews').add(reviewData);
-
-      // Update the booking document directly with rating and review
-      if (bookingId != null && bookingId.isNotEmpty) {
-        try {
-          await _db.collection('bookings').doc(bookingId).update({
-            'rating': ratings,
-            'review': finalReviewText,
-          });
-          debugPrint('✅ [ReviewService] Updated booking $bookingId with rating: $ratings, review: $finalReviewText');
-        } catch (bErr) {
-          debugPrint('⚠️ [ReviewService] Error updating booking document: $bErr');
-        }
-      }
 
       // Recalculate average rating and total reviews for the salon if salonId is available
       if (salonId.isNotEmpty) {

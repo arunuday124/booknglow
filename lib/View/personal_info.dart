@@ -172,6 +172,31 @@ class PersonalInfoScreen extends StatelessWidget {
                               avatarChild = Image.network(
                                 currentUrl,
                                 fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFFE8D5AF),
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder:
+                                    (context, error, stackTrace) => Text(
+                                  controller.nameInitials.value,
+                                  style: GoogleFonts.playfairDisplay(
+                                    textStyle: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFE8D5AF),
+                                    ),
+                                  ),
+                                ),
                               );
                             } else {
                               avatarChild = Image.file(
