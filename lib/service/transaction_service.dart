@@ -35,8 +35,7 @@ class TransactionService {
   }) async {
     try {
       final docRef = _transactionsCol.doc();
-      final isCash = paymentMethod.toLowerCase().trim().contains('cash');
-      final initialStatus = isCash ? 'pending' : 'completed';
+      const initialStatus = 'pending';
       final nowIso = DateTime.now().toIso8601String();
 
       final transactionData = <String, dynamic>{

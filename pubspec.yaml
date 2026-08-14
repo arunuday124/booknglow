@@ -50,6 +50,9 @@ dependencies:
   url_launcher: ^6.3.1
   http: ^1.6.0
   flutter_image_compress: ^2.5.1
+  crypto: ^3.0.7
+  encrypt: ^5.0.3
+  paytmpayments_allinonesdk: ^1.0.4
 
 dev_dependencies:
   flutter_test:

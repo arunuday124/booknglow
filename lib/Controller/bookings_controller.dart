@@ -289,8 +289,7 @@ class BookingsController extends GetxController {
         }
       }
 
-      final isCash = paymentMethod.toLowerCase().trim().contains('cash');
-      final initialPaymentStatus = isCash ? 'pending' : 'completed';
+      const initialPaymentStatus = 'pending';
 
       // 1. Immediately create document in Firestore
       final docId = await BookingService.createBooking(

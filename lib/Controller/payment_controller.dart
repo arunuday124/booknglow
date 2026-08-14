@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../service/paytm_service.dart';
 
 class PaymentController extends GetxController {
-  // Selected payment method: 0 = Credit/Debit, 1 = UPI, 2 = Cash on Delivery
+  // Selected payment method: 0 = Credit/Debit, 1 = UPI / Paytm, 2 = Cash on Delivery
   final RxInt selectedPaymentMethod = 2.obs;
 
   // Coupon state
@@ -10,6 +11,10 @@ class PaymentController extends GetxController {
   final RxnString appliedCoupon = RxnString();
   final RxDouble discountAmount = 0.0.obs;
   final RxnString couponError = RxnString();
+
+  // Payment Processing State
+  final RxBool isProcessingPayment = false.obs;
+  final RxnString paymentStatusMessage = RxnString();
 
   final double deliveryFee = 0.0;
 
@@ -23,7 +28,7 @@ class PaymentController extends GetxController {
       case 0:
         return "Credit / Debit Card";
       case 1:
-        return "UPI (GPay/PhonePe/Paytm)";
+        return "UPI (GPay / PhonePe / Paytm)";
       case 2:
         return "Cash";
       default:
@@ -34,9 +39,9 @@ class PaymentController extends GetxController {
   String get paymentMethodType {
     switch (selectedPaymentMethod.value) {
       case 0:
-        return "card";
+        return "paytm_card";
       case 1:
-        return "upi";
+        return "paytm_upi";
       case 2:
         return "cash";
       default:
@@ -74,6 +79,29 @@ class PaymentController extends GetxController {
     discountAmount.value = 0.0;
     couponController.clear();
     couponError.value = null;
+  }
+
+  /// Triggers Paytm payment gateway for online payments (UPI or Card).
+  Future<PaytmTransactionResult> payWithPaytm({
+    required String orderId,
+    required double amount,
+    required String custMobile,
+  }) async {
+    isProcessingPayment.value = true;
+    paymentStatusMessage.value = 'Initiating Paytm Gateway...';
+
+    try {
+      final result = await PaytmService.startPayment(
+        orderId: orderId,
+        amount: amount,
+        custMobile: custMobile,
+      );
+
+      paymentStatusMessage.value = result.message;
+      return result;
+    } finally {
+      isProcessingPayment.value = false;
+    }
   }
 
   @override

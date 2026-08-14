@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -258,21 +259,6 @@ class PaymentScreen extends StatelessWidget {
       return;
     }
 
-    if (payController.selectedPaymentMethod.value == 0 ||
-        payController.selectedPaymentMethod.value == 1) {
-      Get.snackbar(
-        'Coming Soon',
-        '${payController.paymentMethodName} payment is coming soon. Please select Cash to proceed with your booking.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD97706),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 3),
-      );
-      return;
-    }
-
     final serviceNames = services
         .map(
           (s) => s['serviceName'] ?? s['name'] ?? s['title'] ?? 'Salon Service',
@@ -284,8 +270,37 @@ class PaymentScreen extends StatelessWidget {
 
     final finalTotal = payController.calculateFinalTotal(itemTotal);
     final formattedDate = _formatDate(selectedDate);
+    final orderId = 'ORD_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Show loading state while saving to Firebase
+    final userPhone = FirebaseAuth.instance.currentUser?.phoneNumber ?? '9999999999';
+
+    // Handle Paytm Payment Gateway for Cards / UPI / Online
+    if (payController.selectedPaymentMethod.value == 0 ||
+        payController.selectedPaymentMethod.value == 1) {
+      final result = await payController.payWithPaytm(
+        orderId: orderId,
+        amount: finalTotal,
+        custMobile: userPhone,
+      );
+
+      if (!result.isSuccess) {
+        Get.snackbar(
+          'Payment Unsuccessful',
+          result.message.isNotEmpty
+              ? result.message
+              : 'Payment was cancelled or failed.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade800,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 4),
+        );
+        return;
+      }
+    }
+
+    // Show loading state while saving booking to Firebase
     Get.dialog(
       PopScope(
         canPop: false,
@@ -331,7 +346,7 @@ class PaymentScreen extends StatelessWidget {
       date: formattedDate,
       time: selectedTime,
       services: services,
-      paymentMethod: payController.paymentMethodType,
+      paymentMethod: payController.paymentMethodName,
       bookingStatus: 'Pending',
     );
 
@@ -341,7 +356,6 @@ class PaymentScreen extends StatelessWidget {
     }
 
     if (success) {
-      // Navigate to BookingSuccessScreen on successful Firebase write
       Get.off(
         () => BookingSuccessScreen(
           salonName: salonName,
@@ -354,7 +368,6 @@ class PaymentScreen extends StatelessWidget {
         ),
       );
     } else {
-      // Show error notification on failure
       Get.snackbar(
         'Booking Failed',
         'Unable to process your booking right now. Please try again.',
@@ -1167,7 +1180,7 @@ class PaymentScreen extends StatelessWidget {
             iconBg: const Color(0xFFE2F2EE),
             iconColor: const Color(0xFF05352F),
             payController: payController,
-            isComingSoon: true,
+            isComingSoon: false,
           ),
           const SizedBox(height: 12),
           _buildPaymentMethodOption(
@@ -1178,7 +1191,7 @@ class PaymentScreen extends StatelessWidget {
             iconBg: const Color(0xFFF3E8FF),
             iconColor: const Color(0xFF7E22CE),
             payController: payController,
-            isComingSoon: true,
+            isComingSoon: false,
           ),
           const SizedBox(height: 12),
           _buildPaymentMethodOption(
