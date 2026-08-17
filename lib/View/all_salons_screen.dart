@@ -14,12 +14,15 @@ class AllSalonsScreen extends StatelessWidget {
     // Inject the controller
     final controller = Get.put(SalonsController());
 
-    if (initialCategory != null && controller.categories.contains(initialCategory)) {
+    if (initialCategory != null &&
+        controller.categories.contains(initialCategory)) {
       controller.updateCategory(initialCategory!);
     }
 
     // Local Text controller for the search field to clear/set state easily
-    final searchFieldController = TextEditingController(text: controller.searchQuery.value);
+    final searchFieldController = TextEditingController(
+      text: controller.searchQuery.value,
+    );
 
     // Sync field controller when searchQuery changes (e.g. cleared from elsewhere)
     ever(controller.searchQuery, (String query) {
@@ -72,7 +75,10 @@ class AllSalonsScreen extends StatelessWidget {
         children: [
           // Elegant Search Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -106,7 +112,10 @@ class AllSalonsScreen extends StatelessWidget {
                     ),
                     suffixIcon: controller.searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, color: Color(0xFF7A8D87)),
+                            icon: const Icon(
+                              Icons.clear_rounded,
+                              color: Color(0xFF7A8D87),
+                            ),
                             onPressed: () {
                               controller.clearSearch();
                             },
@@ -131,14 +140,17 @@ class AllSalonsScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final category = controller.categories[index];
                 return Obx(() {
-                  final isSelected = controller.selectedCategory.value == category;
+                  final isSelected =
+                      controller.selectedCategory.value == category;
                   return GestureDetector(
                     onTap: () => controller.updateCategory(category),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8.0),
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF05352F) : Colors.white,
+                        color: isSelected
+                            ? const Color(0xFF05352F)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isSelected
@@ -149,17 +161,19 @@ class AllSalonsScreen extends StatelessWidget {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF05352F).withOpacity(0.2),
+                                  color: const Color(
+                                    0xFF05352F,
+                                  ).withOpacity(0.2),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
-                                )
+                                ),
                               ]
                             : [
                                 BoxShadow(
                                   color: const Color.fromRGBO(0, 0, 0, 0.02),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
-                                )
+                                ),
                               ],
                       ),
                       alignment: Alignment.center,
@@ -168,8 +182,12 @@ class AllSalonsScreen extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           textStyle: TextStyle(
                             fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                            color: isSelected ? const Color(0xFFFAF9F5) : const Color(0xFF7A8D87),
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: isSelected
+                                ? const Color(0xFFFAF9F5)
+                                : const Color(0xFF7A8D87),
                           ),
                         ),
                       ),
@@ -223,9 +241,7 @@ class AllSalonsScreen extends StatelessWidget {
             child: Obx(() {
               if (controller.isLoading.value && controller.salons.isEmpty) {
                 return const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF05352F),
-                  ),
+                  child: CircularProgressIndicator(color: Color(0xFF05352F)),
                 );
               }
 
@@ -271,7 +287,10 @@ class AllSalonsScreen extends StatelessWidget {
               return ListView.builder(
                 controller: controller.scrollController,
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
                 itemCount: filteredList.length + (showLoader ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index == filteredList.length) {
@@ -310,7 +329,8 @@ class AllSalonsScreen extends StatelessWidget {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (context) => SalonDetailBottomSheet(salonData: salon),
+                            builder: (context) =>
+                                SalonDetailBottomSheet(salonData: salon),
                           );
                         },
                         child: Row(
@@ -318,7 +338,7 @@ class AllSalonsScreen extends StatelessWidget {
                             // Luxury placeholder or network image for salon
                             Container(
                               width: 110,
-                              height: 110,
+                              height: 125,
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF5EFE0),
                                 gradient: const LinearGradient(
@@ -337,13 +357,15 @@ class AllSalonsScreen extends StatelessWidget {
                                       ? Image.network(
                                           salonModel.shopImage,
                                           width: 110,
-                                          height: 110,
+                                          height: 130,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => const Icon(
-                                            Icons.spa_outlined,
-                                            color: Color(0xFF05352F),
-                                            size: 34,
-                                          ),
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(
+                                                    Icons.spa_outlined,
+                                                    color: Color(0xFF05352F),
+                                                    size: 34,
+                                                  ),
                                         )
                                       : const Icon(
                                           Icons.spa_outlined,
@@ -360,7 +382,9 @@ class AllSalonsScreen extends StatelessWidget {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF05352F).withOpacity(0.9),
+                                        color: const Color(
+                                          0xFF05352F,
+                                        ).withOpacity(0.9),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -389,18 +413,25 @@ class AllSalonsScreen extends StatelessWidget {
                                   children: [
                                     // Category & Price Row
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFFAF6EE),
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             salonModel.categories.isNotEmpty
-                                                ? salonModel.categories.join(', ')
+                                                ? salonModel.categories.join(
+                                                    ', ',
+                                                  )
                                                 : 'Salon',
                                             style: GoogleFonts.plusJakartaSans(
                                               textStyle: const TextStyle(
