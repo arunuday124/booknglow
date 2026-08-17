@@ -158,7 +158,8 @@ class Login extends StatelessWidget {
                                       ),
                                     )
                                   : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Image.asset(
                                           "assets/images/google.png",
