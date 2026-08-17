@@ -474,23 +474,41 @@ class _TransactionTile extends StatelessWidget {
                             color: _mutedTeal,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            _formatDate(transaction.createdAt),
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 11,
-                                color: _mutedTeal,
+                          Expanded(
+                            child: Text(
+                              _formatDate(transaction.createdAt),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  color: _mutedTeal,
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "•  ${transaction.paymentMethod}",
-                            style: GoogleFonts.plusJakartaSans(
-                              textStyle: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: _mutedTeal,
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            paymentIcon,
+                            size: 11,
+                            color: _mutedTeal,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              transaction.paymentMethod,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: _mutedTeal,
+                                ),
                               ),
                             ),
                           ),
@@ -640,9 +658,9 @@ class _TransactionTile extends StatelessWidget {
 
               // Detail Rows
               _buildDetailRow("Salon", tx.salonName),
+              _buildDetailRow("Date & Time", _formatDate(tx.createdAt)),
               _buildDetailRow("Payment Method", tx.paymentMethod),
               _buildDetailRow("Status", tx.paymentStatus.toUpperCase()),
-              _buildDetailRow("Date & Time", _formatDate(tx.createdAt)),
               if (tx.bookingId.isNotEmpty)
                 _buildDetailRow("Booking Reference", tx.bookingId),
               _buildDetailRow("Transaction ID", tx.transactionId, isCopyable: true),
