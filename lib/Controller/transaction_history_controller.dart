@@ -11,21 +11,13 @@ class TransactionHistoryController extends GetxController {
   final RxString selectedFilter = 'All'.obs;
   final RxString searchQuery = ''.obs;
 
-  StreamSubscription<List<TransactionModel>>? _subscription;
-
   @override
   void onInit() {
     super.onInit();
-    listenToTransactions();
+    fetchTransactions();
   }
 
-  @override
-  void onClose() {
-    _subscription?.cancel();
-    super.onClose();
-  }
-
-  void listenToTransactions() {
+  Future<void> fetchTransactions() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || uid.isEmpty) {
       isLoading.value = false;
@@ -38,27 +30,23 @@ class TransactionHistoryController extends GetxController {
       transactions.assignAll(cached);
       isLoading.value = false;
       debugPrint('⚡ [TransactionHistoryController] Loaded ${cached.length} transactions from memory cache (0 DB calls).');
-      return;
+    } else {
+      isLoading.value = true;
     }
 
-    isLoading.value = true;
-    _subscription?.cancel();
-
-    _subscription = TransactionService.getUserTransactionsStream(uid).listen(
-      (data) {
-        transactions.assignAll(data);
-        isLoading.value = false;
-        debugPrint(
-          '🔥 [TransactionHistoryController] Loaded ${data.length} transactions from Firestore.',
-        );
-      },
-      onError: (error) {
-        debugPrint(
-          '❌ [TransactionHistoryController] Stream error: $error',
-        );
-        isLoading.value = false;
-      },
-    );
+    try {
+      final data = await TransactionService.fetchUserTransactions(uid);
+      transactions.assignAll(data);
+      debugPrint(
+        '🔥 [TransactionHistoryController] Loaded ${data.length} transactions from Firestore.',
+      );
+    } catch (error) {
+      debugPrint(
+        '❌ [TransactionHistoryController] Fetch error: $error',
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   /// Refreshes transaction data manually (e.g., via Pull-to-Refresh)

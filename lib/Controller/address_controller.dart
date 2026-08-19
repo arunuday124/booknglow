@@ -43,21 +43,20 @@ class AddressController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Listen to Firestore stream and keep local state in sync.
+    // Keep selected address in sync when addresses list changes.
     ever(addresses, (_) {
       selectedAddress.value = addresses.firstWhereOrNull((a) => a.isSelected);
     });
 
-    AddressService.streamAddresses().listen((list) {
-      addresses.assignAll(list);
-    });
+    fetchAddresses();
   }
 
-  /// Select an address by its Firestore document ID.
-  Future<void> selectAddress(String docId) async {
+  /// Fetches saved addresses from Firestore once.
+  Future<void> fetchAddresses() async {
     isLoading.value = true;
     try {
-      await AddressService.selectAddress(docId);
+      final list = await AddressService.fetchAddresses();
+      addresses.assignAll(list);
     } catch (e) {
       Get.snackbar('Error', e.toString());
     } finally {
@@ -65,21 +64,53 @@ class AddressController extends GetxController {
     }
   }
 
-  /// Toggle favorite on an address.
+  /// Select an address by its Firestore document ID.
+  /// Optimistically updates local memory state instantly for 0ms UI feedback.
+  Future<void> selectAddress(String docId) async {
+    // 1. Optimistic Local Update: Mark selected address immediately in memory
+    final updatedList = addresses.map((addr) {
+      return addr.copyWith(isSelected: addr.id == docId);
+    }).toList();
+    addresses.assignAll(updatedList);
+    selectedAddress.value = addresses.firstWhereOrNull((a) => a.isSelected);
+
+    // 2. Perform Firestore update in the background
+    try {
+      await AddressService.selectAddress(docId);
+    } catch (e) {
+      Get.snackbar('Error', e.toString());
+      // Revert from server if network failed
+      await fetchAddresses();
+    }
+  }
+
+  /// Toggle favorite on an address with instant local UI update.
   Future<void> toggleFavorite(String docId, bool current) async {
+    final updatedList = addresses.map((addr) {
+      if (addr.id == docId) {
+        return addr.copyWith(isFavorite: !current);
+      }
+      return addr;
+    }).toList();
+    addresses.assignAll(updatedList);
+
     try {
       await AddressService.toggleFavorite(docId, current);
     } catch (e) {
       Get.snackbar('Error', e.toString());
+      await fetchAddresses();
     }
   }
 
-  /// Delete an address.
+  /// Delete an address with instant local removal.
   Future<void> deleteAddress(String docId) async {
+    addresses.removeWhere((addr) => addr.id == docId);
+
     try {
       await AddressService.deleteAddress(docId);
     } catch (e) {
       Get.snackbar('Error', e.toString());
+      await fetchAddresses();
     }
   }
 }

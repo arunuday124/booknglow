@@ -156,24 +156,7 @@ class TransactionService {
     _hasFetchedInitial = true;
   }
 
-  /// Returns a real-time stream of [TransactionModel] for a specific user ID.
-  static Stream<List<TransactionModel>> getUserTransactionsStream(String userId) {
-    return _transactionsCol
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .map((snapshot) {
-      final list = snapshot.docs.map((doc) => TransactionModel.fromSnapshot(doc)).toList();
-      // Sort newest first
-      list.sort((a, b) {
-        if (a.createdAt == null && b.createdAt == null) return 0;
-        if (a.createdAt == null) return 1;
-        if (b.createdAt == null) return -1;
-        return b.createdAt!.compareTo(a.createdAt!);
-      });
-      updateCache(list);
-      return list;
-    });
-  }
+
 
   /// Fetches transactions directly with optional forceRefresh
   static Future<List<TransactionModel>> fetchUserTransactions(

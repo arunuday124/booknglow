@@ -11,8 +11,9 @@ class AllSalonsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inject the controller
-    final controller = Get.put(SalonsController());
+    final controller = Get.isRegistered<SalonsController>()
+        ? Get.find<SalonsController>()
+        : Get.put(SalonsController());
 
     if (initialCategory != null &&
         controller.categories.contains(initialCategory)) {
@@ -238,55 +239,68 @@ class AllSalonsScreen extends StatelessWidget {
 
           // Salons ListView (with Pagination support)
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value && controller.salons.isEmpty) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF05352F)),
-                );
-              }
+            child: RefreshIndicator(
+              color: const Color(0xFF05352F),
+              onRefresh: controller.refreshSalons,
+              child: Obx(() {
+                if (controller.isLoading.value && controller.salons.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF05352F)),
+                  );
+                }
 
-              final filteredList = controller.filteredSalons;
-              if (filteredList.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                final filteredList = controller.filteredSalons;
+                if (filteredList.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                     children: [
-                      Icon(
-                        Icons.search_off_rounded,
-                        size: 64,
-                        color: const Color(0xFF9E7E45).withOpacity(0.4),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "No salons found",
-                        style: GoogleFonts.playfairDisplay(
-                          textStyle: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF05352F),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Try adjusting your search or filter",
-                        style: GoogleFonts.plusJakartaSans(
-                          textStyle: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF7A8D87),
-                          ),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 64,
+                              color: const Color(0xFF9E7E45).withOpacity(0.4),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "No salons found",
+                              style: GoogleFonts.playfairDisplay(
+                                textStyle: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF05352F),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Try adjusting your search or filter",
+                              style: GoogleFonts.plusJakartaSans(
+                                textStyle: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF7A8D87),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
+                  );
+                }
+
+                final bool showLoader = controller.isLoadingMore.value;
+
+                return ListView.builder(
+                  controller: controller.scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
                   ),
-                );
-              }
-
-              final bool showLoader = controller.isLoadingMore.value;
-
-              return ListView.builder(
-                controller: controller.scrollController,
-                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24.0,
                   vertical: 8.0,
@@ -358,6 +372,7 @@ class AllSalonsScreen extends StatelessWidget {
                                           salonModel.shopImage,
                                           width: 110,
                                           height: 130,
+                                          cacheWidth: 300,
                                           fit: BoxFit.cover,
                                           errorBuilder:
                                               (context, error, stackTrace) =>
@@ -532,8 +547,9 @@ class AllSalonsScreen extends StatelessWidget {
               );
             }),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
   }
 }

@@ -265,14 +265,19 @@ class BookingService {
   static final Map<String, List<Map<String, dynamic>>> _cachedSalonBookings = {};
   static final Map<String, DateTime> _cachedSalonBookingsTimestamp = {};
 
+  /// Clears all in-memory bookings cache (e.g. on user logout)
+  static void clearCache() {
+    _cachedSalonBookings.clear();
+    _cachedSalonBookingsTimestamp.clear();
+  }
+
   /// Clears the in-memory salon bookings cache
   static void clearSalonBookingsCache([String? salonId]) {
     if (salonId != null) {
       _cachedSalonBookings.remove(salonId);
       _cachedSalonBookingsTimestamp.remove(salonId);
     } else {
-      _cachedSalonBookings.clear();
-      _cachedSalonBookingsTimestamp.clear();
+      clearCache();
     }
   }
 

@@ -10,21 +10,13 @@ class NotificationsController extends GetxController {
       <Map<String, dynamic>>[].obs;
   final RxBool isLoading = true.obs;
 
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
-
   @override
   void onInit() {
     super.onInit();
-    _listenToNotifications();
+    fetchNotifications();
   }
 
-  @override
-  void onClose() {
-    _subscription?.cancel();
-    super.onClose();
-  }
-
-  void _listenToNotifications() {
+  Future<void> fetchNotifications() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       isLoading.value = false;
@@ -33,62 +25,59 @@ class NotificationsController extends GetxController {
 
     isLoading.value = true;
 
-    _subscription = FirebaseFirestore.instance
-        .collection('notification')
-        .where('userId', isEqualTo: uid)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            final List<Map<String, dynamic>> list = [];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notification')
+          .where('userId', isEqualTo: uid)
+          .get();
 
-            for (var doc in snapshot.docs) {
-              final data = doc.data();
+      final List<Map<String, dynamic>> list = [];
 
-              // ONLY show notification if sentAt is NOT null (meaning it has been confirmed/sent)
-              final sentAt = data['sentAt'] as Timestamp?;
-              if (sentAt == null) continue;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
 
-              final isRead = data['isRead'] as bool? ?? false;
-              final title =
-                  data['notificationTitle'] as String? ?? 'Notification';
-              final message = data['notificationBody'] as String? ?? '';
-              final type = data['notificationType'] as String? ?? 'general';
-              final scheduledAt = data['scheduledAt'] as Timestamp?;
+        // ONLY show notification if sentAt is NOT null (meaning it has been confirmed/sent)
+        final sentAt = data['sentAt'] as Timestamp?;
+        if (sentAt == null) continue;
 
-              list.add({
-                'id': doc.id,
-                'title': title,
-                'message': message,
-                'time': _formatTime(sentAt),
-                'sentAt': sentAt,
-                'scheduledAt': scheduledAt,
-                'icon': _getIconForType(type),
-                'isUnread': !isRead,
-                'bookingId': data['bookingId'] ?? '',
-                'salonId': data['salonId'] ?? '',
-              });
-            }
+        final isRead = data['isRead'] as bool? ?? false;
+        final title = data['notificationTitle'] as String? ?? 'Notification';
+        final message = data['notificationBody'] as String? ?? '';
+        final type = data['notificationType'] as String? ?? 'general';
+        final scheduledAt = data['scheduledAt'] as Timestamp?;
 
-            // Sort by sentAt descending
-            list.sort((a, b) {
-              final aTime = a['sentAt'] as Timestamp?;
-              final bTime = b['sentAt'] as Timestamp?;
-              if (aTime != null && bTime != null) {
-                return bTime.compareTo(aTime);
-              }
-              return 0;
-            });
+        list.add({
+          'id': doc.id,
+          'title': title,
+          'message': message,
+          'time': _formatTime(sentAt),
+          'sentAt': sentAt,
+          'scheduledAt': scheduledAt,
+          'icon': _getIconForType(type),
+          'isUnread': !isRead,
+          'bookingId': data['bookingId'] ?? '',
+          'salonId': data['salonId'] ?? '',
+        });
+      }
 
-            notifications.assignAll(list);
-            isLoading.value = false;
-          },
-          onError: (error) {
-            debugPrint(
-              '❌ [NotificationsController] Firestore subscription error: $error',
-            );
-            isLoading.value = false;
-          },
-        );
+      // Sort by sentAt descending
+      list.sort((a, b) {
+        final aTime = a['sentAt'] as Timestamp?;
+        final bTime = b['sentAt'] as Timestamp?;
+        if (aTime != null && bTime != null) {
+          return bTime.compareTo(aTime);
+        }
+        return 0;
+      });
+
+      notifications.assignAll(list);
+    } catch (error) {
+      debugPrint(
+        '❌ [NotificationsController] Firestore fetch error: $error',
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   bool get hasUnread => notifications.any((n) => n['isUnread'] == true);

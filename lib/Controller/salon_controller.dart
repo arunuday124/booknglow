@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../model/salon_model.dart';
 import '../service/salon_service.dart';
+import '../service/booking_service.dart';
 
 class SalonsController extends GetxController {
   final RxList<SalonModel> salons = <SalonModel>[].obs;
@@ -16,7 +16,14 @@ class SalonsController extends GetxController {
   final RxString selectedCategory = 'All'.obs;
 
   // Categories list
-  final List<String> categories = ['All', 'Facial', 'Massage', 'Nails', 'Hair', 'Spa'];
+  final List<String> categories = [
+    'All',
+    'Facial',
+    'Massage',
+    'Nails',
+    'Hair',
+    'Spa',
+  ];
 
   // Scroll controller for lazy-loading pagination
   final ScrollController scrollController = ScrollController();
@@ -28,14 +35,16 @@ class SalonsController extends GetxController {
 
     // Scroll listener for pagination (loads next 10 salons near scroll end)
     scrollController.addListener(() {
-      if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 200) {
+      if (scrollController.position.pixels >=
+          scrollController.position.maxScrollExtent - 200) {
         loadMoreSalons();
       }
     });
   }
 
   Future<void> _initSalons() async {
-    if (SalonService.hasFetchedInitial && SalonService.cachedSalons.isNotEmpty) {
+    if (SalonService.hasFetchedInitial &&
+        SalonService.cachedSalons.isNotEmpty) {
       salons.value = SalonService.cachedSalons;
       hasMore.value = SalonService.hasMore;
       return;
@@ -46,6 +55,12 @@ class SalonsController extends GetxController {
     salons.value = List.from(list);
     hasMore.value = SalonService.hasMore;
     isLoading.value = false;
+  }
+
+  Future<void> refreshSalons() async {
+    final list = await SalonService.fetchInitialSalons(forceRefresh: true);
+    salons.value = List.from(list);
+    hasMore.value = SalonService.hasMore;
   }
 
   Future<void> loadMoreSalons() async {
@@ -119,7 +134,6 @@ class SalonDetailController extends GetxController {
   final RxSet<String> selectedServices = <String>{}.obs;
   final RxSet<String> lockedTimeSlots = <String>{}.obs;
 
-  StreamSubscription? _bookingsSubscription;
   List<Map<String, dynamic>> _salonBookingsDocs = [];
 
   @override
@@ -128,7 +142,7 @@ class SalonDetailController extends GetxController {
     _generateDates();
     _generateTimes();
     _generateServices();
-    _listenToBookedSlots();
+    fetchBookedSlots();
 
     // Re-evaluate locked slots whenever selectedDate changes
     ever(selectedDate, (_) => _reevaluateLockedSlots());
@@ -146,18 +160,20 @@ class SalonDetailController extends GetxController {
   void _generateTimes() {
     availableTimes.clear();
 
-    String openStr = (salonData['openingHours'] ??
-            salonData['opening_hours'] ??
-            salonData['openingTime'] ??
-            '9 AM')
-        .toString()
-        .trim();
-    String closeStr = (salonData['closingHours'] ??
-            salonData['closing_hours'] ??
-            salonData['closingTime'] ??
-            '10 PM')
-        .toString()
-        .trim();
+    String openStr =
+        (salonData['openingHours'] ??
+                salonData['opening_hours'] ??
+                salonData['openingTime'] ??
+                '9 AM')
+            .toString()
+            .trim();
+    String closeStr =
+        (salonData['closingHours'] ??
+                salonData['closing_hours'] ??
+                salonData['closingTime'] ??
+                '10 PM')
+            .toString()
+            .trim();
 
     if (openStr.contains('-') &&
         (closeStr.isEmpty || closeStr == openStr || closeStr == '10 PM')) {
@@ -217,13 +233,17 @@ class SalonDetailController extends GetxController {
 
   void _generateServices() {
     // 1. Try parsing services array directly from Firestore document data
-    if (salonData['services'] != null && (salonData['services'] as List).isNotEmpty) {
+    if (salonData['services'] != null &&
+        (salonData['services'] as List).isNotEmpty) {
       final rawList = salonData['services'] as List;
       final List<Map<String, dynamic>> parsedServices = [];
 
       for (var item in rawList) {
         if (item is Map) {
-          final sName = item['serviceName']?.toString() ?? item['name']?.toString() ?? 'Service';
+          final sName =
+              item['serviceName']?.toString() ??
+              item['name']?.toString() ??
+              'Service';
           final sPriceRaw = item['price'] ?? 50;
           final int sPrice = sPriceRaw is num
               ? sPriceRaw.toInt()
@@ -250,12 +270,17 @@ class SalonDetailController extends GetxController {
     } else if (salonData['category'] != null) {
       categories.add(salonData['category'] as String);
     } else {
-      final name = (salonData['salonName'] ?? salonData['name'] ?? '').toString().toLowerCase();
+      final name = (salonData['salonName'] ?? salonData['name'] ?? '')
+          .toString()
+          .toLowerCase();
       if (name.contains('spa')) categories.add('Spa');
-      if (name.contains('hair') || name.contains('boutique') || name.contains('skincare')) {
+      if (name.contains('hair') ||
+          name.contains('boutique') ||
+          name.contains('skincare')) {
         categories.add('Hair');
       }
-      if (name.contains('nail') || name.contains('studio')) categories.add('Nails');
+      if (name.contains('nail') || name.contains('studio'))
+        categories.add('Nails');
       if (name.contains('wellness')) categories.addAll(['Massage', 'Spa']);
       if (categories.isEmpty) categories.add('Spa');
     }
@@ -267,36 +292,72 @@ class SalonDetailController extends GetxController {
         case 'Facial':
         case 'facial':
           services.addAll([
-            {'name': 'Signature Gold Facial', 'price': 85, 'duration': '45 min'},
-            {'name': 'HydraFacial Skin Therapy', 'price': 120, 'duration': '60 min'},
+            {
+              'name': 'Signature Gold Facial',
+              'price': 85,
+              'duration': '45 min',
+            },
+            {
+              'name': 'HydraFacial Skin Therapy',
+              'price': 120,
+              'duration': '60 min',
+            },
           ]);
           break;
         case 'Massage':
         case 'massage':
           services.addAll([
-            {'name': 'Swedish Relieving Massage', 'price': 95, 'duration': '60 min'},
-            {'name': 'Deep Tissue Target Therapy', 'price': 115, 'duration': '75 min'},
+            {
+              'name': 'Swedish Relieving Massage',
+              'price': 95,
+              'duration': '60 min',
+            },
+            {
+              'name': 'Deep Tissue Target Therapy',
+              'price': 115,
+              'duration': '75 min',
+            },
           ]);
           break;
         case 'Nails':
         case 'nails':
           services.addAll([
             {'name': 'Luxury Gel Manicure', 'price': 50, 'duration': '35 min'},
-            {'name': 'Paraffin Restoring Pedicure', 'price': 65, 'duration': '50 min'},
+            {
+              'name': 'Paraffin Restoring Pedicure',
+              'price': 65,
+              'duration': '50 min',
+            },
           ]);
           break;
         case 'Hair':
         case 'hair':
           services.addAll([
-            {'name': 'Luxury Wash, Cut & Style', 'price': 70, 'duration': '40 min'},
-            {'name': 'Keratin Intense Smooth Treatment', 'price': 150, 'duration': '120 min'},
+            {
+              'name': 'Luxury Wash, Cut & Style',
+              'price': 70,
+              'duration': '40 min',
+            },
+            {
+              'name': 'Keratin Intense Smooth Treatment',
+              'price': 150,
+              'duration': '120 min',
+            },
           ]);
           break;
         case 'Spa':
         case 'spa':
           services.addAll([
-            {'name': 'Nirvana Botanical Bath', 'price': 110, 'duration': '50 min'},
-            {'name': 'Aromatherapy Mud Wrap', 'price': 130, 'duration': '70 min'},
+            {
+              'name': 'Nirvana Botanical Bath',
+              'price': 110,
+              'duration': '50 min',
+            },
+            {
+              'name': 'Aromatherapy Mud Wrap',
+              'price': 130,
+              'duration': '70 min',
+            },
           ]);
           break;
       }
@@ -317,7 +378,9 @@ class SalonDetailController extends GetxController {
     double total = 0;
     for (var service in availableServices) {
       if (selectedServices.contains(service['name'])) {
-        total += (service['price'] is num ? (service['price'] as num).toDouble() : 0);
+        total += (service['price'] is num
+            ? (service['price'] as num).toDouble()
+            : 0);
       }
     }
     return total;
@@ -331,31 +394,22 @@ class SalonDetailController extends GetxController {
     }
   }
 
-  void _listenToBookedSlots() {
-    final salonId = (salonData['salonId'] ??
-            salonData['id'] ??
-            salonData['name'] ??
-            '')
-        .toString();
+  Future<void> fetchBookedSlots({bool forceRefresh = false}) async {
+    final salonId =
+        (salonData['salonId'] ?? salonData['id'] ?? salonData['name'] ?? '')
+            .toString();
     if (salonId.isEmpty) return;
 
     try {
-      _bookingsSubscription?.cancel();
-      _bookingsSubscription = FirebaseFirestore.instance
-          .collection('bookings')
-          .where('salonId', isEqualTo: salonId)
-          .snapshots()
-          .listen(
-        (snapshot) {
-          _salonBookingsDocs = snapshot.docs.map((d) => d.data()).toList();
-          _reevaluateLockedSlots();
-        },
-        onError: (e) {
-          debugPrint('❌ [SalonDetailController] Error listening to bookings: $e');
-        },
+      _salonBookingsDocs = await BookingService.getBookingsForSalon(
+        salonId,
+        forceRefresh: forceRefresh,
       );
+      _reevaluateLockedSlots();
     } catch (e) {
-      debugPrint('⚠️ [SalonDetailController] Firebase not initialized or unavailable: $e');
+      debugPrint(
+        '⚠️ [SalonDetailController] Error fetching salon bookings: $e',
+      );
     }
   }
 
@@ -365,7 +419,9 @@ class SalonDetailController extends GetxController {
     if (date == null || _salonBookingsDocs.isEmpty) return;
 
     for (var doc in _salonBookingsDocs) {
-      final status = (doc['bookingStatus']?.toString() ?? '').toLowerCase().trim();
+      final status = (doc['bookingStatus']?.toString() ?? '')
+          .toLowerCase()
+          .trim();
       // Lock slot ONLY if bookingStatus is "Confirmed"
       if (status != 'confirmed') {
         continue;
@@ -433,8 +489,18 @@ class SalonDetailController extends GetxController {
 
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final formatted1 =
         "${days[target.weekday - 1]}, ${months[target.month - 1]} ${target.day}, ${target.year}"
@@ -511,11 +577,5 @@ class SalonDetailController extends GetxController {
     selectedDate.value = null;
     selectedTime.value = '';
     selectedServices.clear();
-  }
-
-  @override
-  void onClose() {
-    _bookingsSubscription?.cancel();
-    super.onClose();
   }
 }

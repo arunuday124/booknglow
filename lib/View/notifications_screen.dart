@@ -59,66 +59,79 @@ class NotificationsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(
-              color: _deepGreen,
-            ),
-          );
-        }
+      body: RefreshIndicator(
+        color: _deepGreen,
+        onRefresh: controller.fetchNotifications,
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: _deepGreen,
+              ),
+            );
+          }
 
-        if (controller.notifications.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          if (controller.notifications.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color.fromRGBO(0, 0, 0, 0.04),
-                        blurRadius: 16,
-                        offset: Offset(0, 4),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.04),
+                              blurRadius: 16,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.notifications_off_outlined,
+                          size: 32,
+                          color: _mutedTeal,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No Notifications Yet",
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _deepGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "We'll notify you about bookings, offers & updates here.",
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: _mutedTeal,
+                        ),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.notifications_off_outlined,
-                    size: 32,
-                    color: _mutedTeal,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "No Notifications Yet",
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _deepGreen,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "We'll notify you about bookings, offers & updates here.",
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: _mutedTeal,
-                  ),
                 ),
               ],
-            ),
-          );
-        }
+            );
+          }
 
-        return ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-          itemCount: controller.notifications.length,
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+            itemCount: controller.notifications.length,
           itemBuilder: (context, index) {
             final item = controller.notifications[index];
             final isUnread = item['isUnread'] as bool;
@@ -257,6 +270,7 @@ class NotificationsScreen extends StatelessWidget {
           },
         );
       }),
-    );
+    ),
+  );
   }
 }

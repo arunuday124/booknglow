@@ -190,67 +190,82 @@ class SelectLocationScreen extends StatelessWidget {
 
           // ── Address List ────────────────────────────────────────────
           Expanded(
-            child: Obx(() {
-              final isSearching = addressController.searchQuery.value
-                  .trim()
-                  .isNotEmpty;
-              final addresses = addressController.filteredAddresses;
+            child: RefreshIndicator(
+              color: _green,
+              onRefresh: addressController.fetchAddresses,
+              child: Obx(() {
+                final isSearching = addressController.searchQuery.value
+                    .trim()
+                    .isNotEmpty;
+                final addresses = addressController.filteredAddresses;
 
-              if (addresses.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                if (addresses.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                     children: [
-                      Icon(
-                        isSearching
-                            ? Icons.search_off_rounded
-                            : Icons.location_off_outlined,
-                        size: 48,
-                        color: _textMuted.withOpacity(0.5),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        isSearching
-                            ? 'No matching addresses found'
-                            : 'No saved addresses yet',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          color: _textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        isSearching
-                            ? 'Try searching with a different area or keyword'
-                            : 'Tap "Add New Address" to get started',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: _textMuted.withOpacity(0.7),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              isSearching
+                                  ? Icons.search_off_rounded
+                                  : Icons.location_off_outlined,
+                              size: 48,
+                              color: _textMuted.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              isSearching
+                                  ? 'No matching addresses found'
+                                  : 'No saved addresses yet',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                color: _textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isSearching
+                                  ? 'Try searching with a different area or keyword'
+                                  : 'Tap "Add New Address" to get started',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: _textMuted.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                itemCount: addresses.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final addr = addresses[index];
-                  return _AddressCard(
-                    address: addr,
-                    onSelect: () => addressController.selectAddress(addr.id!),
-                    onToggleFavorite: () => addressController.toggleFavorite(
-                      addr.id!,
-                      addr.isFavorite,
-                    ),
-                    onDelete: () => addressController.deleteAddress(addr.id!),
                   );
-                },
-              );
-            }),
+                }
+
+                return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  itemCount: addresses.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final addr = addresses[index];
+                    return _AddressCard(
+                      address: addr,
+                      onSelect: () => addressController.selectAddress(addr.id!),
+                      onToggleFavorite: () => addressController.toggleFavorite(
+                        addr.id!,
+                        addr.isFavorite,
+                      ),
+                      onDelete: () => addressController.deleteAddress(addr.id!),
+                    );
+                  },
+                );
+              }),
+            ),
           ),
         ],
       ),

@@ -17,8 +17,6 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _bookingSubscription;
-  StreamSubscription<User?>? _authSubscription;
 
   /// Cache document ID -> previous status string
   final Map<String, String> _previousStatuses = {};
@@ -47,79 +45,50 @@ class NotificationService {
         }
       });
 
-      // 3. Listen to auth state changes to start/stop booking listener
-      _authSubscription?.cancel();
-      _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
-        if (user != null) {
-          _startBookingStatusListener(user.uid);
-        } else {
-          _stopBookingStatusListener();
-        }
-      });
-
       debugPrint('✅ [NotificationService] Notification service initialized successfully!');
     } catch (e, stack) {
       debugPrint('❌ [NotificationService] Initialization error: $e\n$stack');
     }
   }
 
-  /// Listens to real-time status updates on user's bookings.
-  void _startBookingStatusListener(String userId) {
-    _stopBookingStatusListener();
-    _previousStatuses.clear();
+  /// One-time fetch to check booking status updates for the user without continuous streaming.
+  Future<void> checkBookingStatusNotifications(String userId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
 
-    _bookingSubscription = FirebaseFirestore.instance
-        .collection('bookings')
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .listen(
-      (snapshot) async {
-        for (var change in snapshot.docChanges) {
-          final data = change.doc.data();
-          if (data == null) continue;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final docId = doc.id;
+        final status = (data['bookingStatus'] as String? ?? '').trim();
+        final salonName = data['salonName'] as String? ?? 'Salon';
+        final date = data['date'] as String? ?? '';
+        final time = data['time'] as String? ?? '';
+        final salonId = data['salonId'] as String? ?? '';
 
-          final docId = change.doc.id;
-          final status = (data['bookingStatus'] as String? ?? '').trim();
-          final salonName = data['salonName'] as String? ?? 'Salon';
-          final date = data['date'] as String? ?? '';
-          final time = data['time'] as String? ?? '';
-          final salonId = data['salonId'] as String? ?? '';
+        final previousStatus = _previousStatuses[docId];
+        _previousStatuses[docId] = status;
 
-          final previousStatus = _previousStatuses[docId];
+        final isNowConfirmed = status.toLowerCase() == 'confirmed';
+        final wasNotConfirmed = previousStatus != null &&
+            previousStatus.toLowerCase() != 'confirmed';
 
-          // Store initial status on load without triggering update
-          if (change.type == DocumentChangeType.added) {
-            _previousStatuses[docId] = status;
-            continue;
-          }
-
-          _previousStatuses[docId] = status;
-
-          final isNowConfirmed = status.toLowerCase() == 'confirmed';
-          final wasNotConfirmed = previousStatus != null &&
-              previousStatus.toLowerCase() != 'confirmed';
-
-          // When booking status transitions from Pending to Confirmed
-          if (isNowConfirmed && wasNotConfirmed) {
-            debugPrint(
-              '🎉 [NotificationService] Booking $docId confirmed! Populating sentAt on notification doc...',
-            );
-
-            await _markNotificationAsConfirmed(
-              bookingId: docId,
-              userId: userId,
-              salonId: salonId,
-              salonName: salonName,
-              date: date,
-              time: time,
-            );
-          }
+        if (isNowConfirmed && wasNotConfirmed) {
+          await _markNotificationAsConfirmed(
+            bookingId: docId,
+            userId: userId,
+            salonId: salonId,
+            salonName: salonName,
+            date: date,
+            time: time,
+          );
         }
-      },
-      onError: (error) {
-        debugPrint('❌ [NotificationService] Firestore listener error: $error');
-      },
-    );
+      }
+    } catch (error) {
+      debugPrint('❌ [NotificationService] One-time booking check error: $error');
+    }
   }
 
   /// Sets sentAt = Timestamp.now() on the staged notification document in Firestore.
@@ -234,11 +203,5 @@ class NotificationService {
     } catch (e) {
       return Timestamp.now();
     }
-  }
-
-  void _stopBookingStatusListener() {
-    _bookingSubscription?.cancel();
-    _bookingSubscription = null;
-    _previousStatuses.clear();
   }
 }

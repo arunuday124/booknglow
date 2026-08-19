@@ -4,6 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../Controller/personal_info_controller.dart';
+import '../service/user_service.dart';
+import '../service/salon_service.dart';
+import '../service/booking_service.dart';
+import '../service/transaction_service.dart';
 import 'login.dart';
 import 'personal_info.dart';
 import 'transaction_history_screen.dart';
@@ -361,6 +365,12 @@ class ProfileScreen extends StatelessWidget {
                   onPressed: () async {
                     try {
                       await FirebaseAuth.instance.signOut();
+                      UserService.clearCache();
+                      SalonService.clearCache();
+                      BookingService.clearCache();
+                      TransactionService.clearCache();
+                      Get.deleteAll(force: true);
+
                       Get.snackbar(
                         'Signed Out',
                         'You have logged out successfully.',

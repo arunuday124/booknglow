@@ -13,16 +13,15 @@ class AddressService {
     return _db.collection('user').doc(uid).collection('savedAddress');
   }
 
-  /// Stream of all saved addresses, ordered by createdAt descending.
-  static Stream<List<SavedAddressModel>> streamAddresses() {
+  /// Fetches all saved addresses once, ordered by createdAt descending.
+  static Future<List<SavedAddressModel>> fetchAddresses() async {
     final col = _addressCol;
-    if (col == null) return const Stream.empty();
+    if (col == null) return [];
 
-    return col.orderBy('createdAt', descending: true).snapshots().map(
-          (snap) => snap.docs
-              .map((doc) => SavedAddressModel.fromMap(doc.id, doc.data()))
-              .toList(),
-        );
+    final snap = await col.orderBy('createdAt', descending: true).get();
+    return snap.docs
+        .map((doc) => SavedAddressModel.fromMap(doc.id, doc.data()))
+        .toList();
   }
 
   /// Adds a new address and marks it as selected.
