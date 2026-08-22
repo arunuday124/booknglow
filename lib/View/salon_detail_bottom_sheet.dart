@@ -639,76 +639,114 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: controller.availableServices.length,
-                        itemBuilder: (context, index) {
-                          final service = controller.availableServices[index];
-                          final serviceName = service['name'] as String;
+                      if (controller.availableServices.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFAF9F5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE8D5AF).withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: Color(0xFF7A8D87),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "No Services Added yet",
+                                style: GoogleFonts.plusJakartaSans(
+                                  textStyle: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF7A8D87),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: controller.availableServices.length,
+                          itemBuilder: (context, index) {
+                            final service = controller.availableServices[index];
+                            final serviceName = service['name'] as String;
 
-                          return Obx(() {
-                            final isSelected = controller.selectedServices
-                                .contains(serviceName);
+                            return Obx(() {
+                              final isSelected = controller.selectedServices
+                                  .contains(serviceName);
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFFFAF6EE)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFF9E7E45).withValues(alpha: 0.5)
-                                      : const Color(
-                                          0xFFE8D5AF,
-                                        ).withValues(alpha: 0.2),
-                                  width: 1,
-                                ),
-                              ),
-                              child: CheckboxListTile(
-                                activeColor: const Color(0xFF05352F),
-                                checkColor: Colors.white,
-                                value: isSelected,
-                                onChanged: (val) =>
-                                    controller.toggleService(serviceName),
-                                title: Text(
-                                  serviceName,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    textStyle: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF05352F),
-                                    ),
+                                      ? const Color(0xFFFAF6EE)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFF9E7E45).withValues(alpha: 0.5)
+                                        : const Color(
+                                            0xFFE8D5AF,
+                                          ).withValues(alpha: 0.2),
+                                    width: 1,
                                   ),
                                 ),
-                                subtitle: Text(
-                                  service['duration'] as String,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    textStyle: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF7A8D87),
+                                child: CheckboxListTile(
+                                  activeColor: const Color(0xFF05352F),
+                                  checkColor: Colors.white,
+                                  value: isSelected,
+                                  onChanged: (val) =>
+                                      controller.toggleService(serviceName),
+                                  title: Text(
+                                    serviceName,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF05352F),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                secondary: Text(
-                                  '₹${service['price']}',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    textStyle: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF9E7E45),
+                                  subtitle: Text(
+                                    service['duration'] as String,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      textStyle: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF7A8D87),
+                                      ),
                                     ),
                                   ),
+                                  secondary: Text(
+                                    '₹${service['price']}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF9E7E45),
+                                      ),
+                                    ),
+                                  ),
+                                  controlAffinity:
+                                      ListTileControlAffinity.trailing,
                                 ),
-                                controlAffinity:
-                                    ListTileControlAffinity.trailing,
-                              ),
-                            );
-                          });
-                        },
-                      ),
+                              );
+                            });
+                          },
+                        ),
                     ],
                   ),
                 ),

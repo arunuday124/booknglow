@@ -207,34 +207,31 @@ class HomeScreen extends StatelessWidget {
               // ),
               // const SizedBox(height: 20),
 
-              // Greeting
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Hello, Beautiful",
-                    style: GoogleFonts.playfairDisplay(
-                      textStyle: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF05352F),
+              // Greeting Row with Male / Female Toggle Switch
+              Obx(() {
+                final isMale = salonsCtrl.selectedGender.value == 'Male';
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      isMale ? "Hello, Handsome" : "Hello, Beautiful",
+                      style: GoogleFonts.playfairDisplay(
+                        textStyle: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF05352F),
+                        ),
                       ),
                     ),
-                  ),
-                  // const SizedBox(height: 2),
-                  // Text(
-                  //   "Book Your Next Experience",
-                  //   style: GoogleFonts.plusJakartaSans(
-                  //     textStyle: const TextStyle(
-                  //       fontSize: 12,
-                  //       color: Color(0xFF7A8D87),
-                  //       fontWeight: FontWeight.w400,
-                  //     ),
-                  //   ),
-                  // ),
-                ],
-              ),
-              // const SizedBox(height: 20),
+                    _GenderToggleSwitch(
+                      selectedGender: salonsCtrl.selectedGender.value,
+                      onToggle: salonsCtrl.toggleGender,
+                    ),
+                  ],
+                );
+              }),
+              const SizedBox(height: 16),
 
               // Categories Header
               Row(
@@ -668,6 +665,118 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 100),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom Pill Male/Female Toggle Switch matching reference design
+class _GenderToggleSwitch extends StatelessWidget {
+  final String selectedGender;
+  final VoidCallback onToggle;
+
+  const _GenderToggleSwitch({
+    required this.selectedGender,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMale = selectedGender == 'Male';
+
+    // Active pill background color matching the design:
+    // Male: Vibrant Sky Blue (#2196F3 / #1E88E5)
+    // Female: Warm Amber Gold (#FFB300 / #FFA000)
+    final activeColor = isMale
+        ? const Color(0xFF2196F3)
+        : const Color(0xFFFFB300);
+
+    return GestureDetector(
+      onTap: onToggle,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        width: 92,
+        height: 32,
+        padding: const EdgeInsets.all(2.5),
+        decoration: BoxDecoration(
+          color: activeColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: activeColor.withOpacity(0.28),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Label Text ("Male" on right when Male, "Female" on left when Female)
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: isMale ? Alignment.centerRight : Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: isMale ? 0 : 10,
+                  right: isMale ? 22 : 0,
+                ),
+                child: Text(
+                  isMale ? 'Male' : 'Female',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+            // White Avatar Circle Knob (Slides Left <-> Right)
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: isMale ? Alignment.centerLeft : Alignment.centerRight,
+              child: Container(
+                width: 27,
+                height: 27,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color.fromRGBO(0, 0, 0, 0.12),
+                      blurRadius: 3,
+                      offset: Offset(0, 1.5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Container(
+                    width: 21,
+                    height: 21,
+                    decoration: BoxDecoration(
+                      color: isMale
+                          ? const Color(0xFFE3F2FD)
+                          : const Color(0xFFFFF8E1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isMale ? Icons.boy_rounded : Icons.girl_rounded,
+                      color: isMale
+                          ? const Color(0xFF1976D2)
+                          : const Color(0xFFF57F17),
+                      size: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

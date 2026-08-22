@@ -11,9 +11,18 @@ class SalonsController extends GetxController {
   final RxBool isLoadingMore = false.obs;
   final RxBool hasMore = true.obs;
 
-  // Search and Category observables
+  // Search, Category and Gender observables
   final RxString searchQuery = ''.obs;
   final RxString selectedCategory = 'All'.obs;
+  final RxString selectedGender = 'Female'.obs;
+
+  void toggleGender() {
+    if (selectedGender.value == 'Female') {
+      selectedGender.value = 'Male';
+    } else {
+      selectedGender.value = 'Female';
+    }
+  }
 
   // Categories list
   final List<String> categories = [
@@ -263,6 +272,9 @@ class SalonDetailController extends GetxController {
       }
     }
 
+    availableServices = [];
+
+    /*
     // 2. Fallback to generating categories-based services if services array is empty
     final List<String> categories = [];
     if (salonData['categories'] != null) {
@@ -371,10 +383,12 @@ class SalonDetailController extends GetxController {
     }
 
     availableServices = services;
+    */
   }
 
   // Computed totalPrice
   double get totalPrice {
+    selectedServices.length; // Access Rx list so Obx observers always register even when availableServices is empty
     double total = 0;
     for (var service in availableServices) {
       if (selectedServices.contains(service['name'])) {

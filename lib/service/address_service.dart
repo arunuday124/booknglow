@@ -30,14 +30,13 @@ class AddressService {
     final col = _addressCol;
     if (col == null) throw Exception('User not logged in');
 
-    // Batch: unselect all existing, then add new doc selected
+    // Batch: unselect currently selected address, then add new doc selected
     final batch = _db.batch();
 
-    final existing = await col.get();
-    for (final doc in existing.docs) {
-      if (doc.data()['isSelected'] == true) {
-        batch.update(doc.reference, {'isSelected': false});
-      }
+    final currentlySelected =
+        await col.where('isSelected', isEqualTo: true).get();
+    for (final doc in currentlySelected.docs) {
+      batch.update(doc.reference, {'isSelected': false});
     }
 
     final newRef = col.doc();
@@ -56,16 +55,25 @@ class AddressService {
   }
 
   /// Marks one address as selected and unmarks all others (batch).
+  /// Queries only currently selected document to reduce Firebase reads.
   static Future<void> selectAddress(String docId) async {
     final col = _addressCol;
     if (col == null) return;
 
     final batch = _db.batch();
-    final all = await col.get();
 
-    for (final doc in all.docs) {
-      batch.update(doc.reference, {'isSelected': doc.id == docId});
+    // Query only currently selected address doc (1 read instead of fetching all docs)
+    final currentlySelected =
+        await col.where('isSelected', isEqualTo: true).get();
+
+    for (final doc in currentlySelected.docs) {
+      if (doc.id != docId) {
+        batch.update(doc.reference, {'isSelected': false});
+      }
     }
+
+    // Mark target address selected
+    batch.update(col.doc(docId), {'isSelected': true});
 
     await batch.commit();
   }
