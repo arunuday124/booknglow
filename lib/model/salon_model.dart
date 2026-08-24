@@ -53,6 +53,7 @@ class SalonModel {
   final GeoPoint location;
   final Timestamp createdAt;
   final List<SalonServiceItem> services;
+  final String salonType; // 'male', 'female', or 'unisex'
 
   SalonModel({
     required this.salonId,
@@ -69,6 +70,7 @@ class SalonModel {
     required this.location,
     required this.createdAt,
     required this.services,
+    this.salonType = 'unisex',
   });
 
   /// Factory constructor to parse Firestore document snapshot safely.
@@ -88,6 +90,25 @@ class SalonModel {
 
     final phoneVal = map['phone']?.toString() ?? '';
 
+    final rawType = (map['salonType'] ?? map['gender'] ?? map['type'] ?? map['salon_type'])
+            ?.toString()
+            .toLowerCase()
+            .trim() ??
+        'unisex';
+
+    String parsedSalonType = 'unisex';
+    if (rawType.contains('female') ||
+        rawType.contains('women') ||
+        rawType.contains('ladies')) {
+      parsedSalonType = 'female';
+    } else if (rawType.contains('male') ||
+        rawType.contains('men') ||
+        rawType.contains('gents')) {
+      parsedSalonType = 'male';
+    } else {
+      parsedSalonType = 'unisex';
+    }
+
     return SalonModel(
       salonId: (map['salonId'] as String?)?.isNotEmpty == true ? map['salonId'] as String : docId,
       salonName: map['salonName'] as String? ?? map['name'] as String? ?? 'Salon',
@@ -103,6 +124,7 @@ class SalonModel {
       location: map['location'] is GeoPoint ? map['location'] as GeoPoint : const GeoPoint(0, 0),
       createdAt: map['createdAt'] as Timestamp? ?? Timestamp.now(),
       services: parsedServices,
+      salonType: parsedSalonType,
     );
   }
 
@@ -127,6 +149,7 @@ class SalonModel {
       'price': '',
       'isOpen': true,
       'services': services.map((s) => s.toMap()).toList(),
+      'salonType': salonType,
     };
   }
 }

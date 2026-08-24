@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/salon_model.dart';
 import '../service/salon_service.dart';
 import '../service/booking_service.dart';
 
 class SalonsController extends GetxController {
+  static const String _genderPrefKey = 'selected_gender';
+
   final RxList<SalonModel> salons = <SalonModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
@@ -16,11 +19,42 @@ class SalonsController extends GetxController {
   final RxString selectedCategory = 'All'.obs;
   final RxString selectedGender = 'Female'.obs;
 
-  void toggleGender() {
+  Future<void> toggleGender() async {
     if (selectedGender.value == 'Female') {
       selectedGender.value = 'Male';
     } else {
       selectedGender.value = 'Female';
+    }
+    await _saveGenderPreference(selectedGender.value);
+  }
+
+  Future<void> setGender(String gender) async {
+    selectedGender.value = gender;
+    await _saveGenderPreference(gender);
+  }
+
+  Future<void> _loadSavedGenderPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedGender = prefs.getString(_genderPrefKey);
+      if (savedGender != null && (savedGender == 'Female' || savedGender == 'Male')) {
+        selectedGender.value = savedGender;
+      } else {
+        // Default stays Female and is saved to preferences
+        selectedGender.value = 'Female';
+        await prefs.setString(_genderPrefKey, 'Female');
+      }
+    } catch (e) {
+      debugPrint('Error loading gender preference: $e');
+    }
+  }
+
+  Future<void> _saveGenderPreference(String gender) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_genderPrefKey, gender);
+    } catch (e) {
+      debugPrint('Error saving gender preference: $e');
     }
   }
 
@@ -40,6 +74,7 @@ class SalonsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadSavedGenderPreference();
     _initSalons();
 
     // Scroll listener for pagination (loads next 10 salons near scroll end)
@@ -87,19 +122,33 @@ class SalonsController extends GetxController {
     return salons.map((s) => s.toMap()).toList();
   }
 
-  /// Filtered list of salons matching category and search query
+  /// Filtered list of salons matching gender toggle ('Male' / 'Female'), category and search query
   List<SalonModel> get filteredSalons {
     final query = searchQuery.value.toLowerCase().trim();
     final category = selectedCategory.value.toLowerCase().trim();
+    final currentGender = selectedGender.value.toLowerCase().trim(); // 'male' or 'female'
 
     return salons.where((salon) {
-      // 1. Fast category check first
+      // 1. Gender filtering based on salonType ('male', 'female', or 'unisex')
+      // 'male' toggle shows male & unisex salons
+      // 'female' toggle shows female & unisex salons
+      final type = salon.salonType.toLowerCase().trim();
+      if (type.isNotEmpty && type != 'unisex') {
+        if (currentGender == 'male' && type != 'male') {
+          return false;
+        }
+        if (currentGender == 'female' && type != 'female') {
+          return false;
+        }
+      }
+
+      // 2. Fast category check first
       if (category != 'all' &&
           !salon.categories.any((c) => c.toLowerCase() == category)) {
         return false;
       }
 
-      // 2. Short-circuit search query check
+      // 3. Short-circuit search query check
       if (query.isEmpty) return true;
 
       return salon.salonName.toLowerCase().contains(query) ||

@@ -134,6 +134,28 @@ class SalonDetailBottomSheet extends StatelessWidget {
 
     final String name = salonData['name'] ?? 'Luxury Salon';
     final String location = salonData['location'] ?? 'Downtown';
+    final String rawSalonType = (salonData['salonType'] ??
+            salonData['gender'] ??
+            salonData['type'] ??
+            salonData['salon_type'] ??
+            'Unisex')
+        .toString()
+        .trim();
+
+    String displaySalonType = 'Unisex';
+    final lowerType = rawSalonType.toLowerCase();
+    if (lowerType.contains('female') ||
+        lowerType.contains('women') ||
+        lowerType.contains('ladies')) {
+      displaySalonType = 'Female';
+    } else if (lowerType.contains('male') ||
+        lowerType.contains('men') ||
+        lowerType.contains('gents')) {
+      displaySalonType = 'Male';
+    } else if (rawSalonType.isNotEmpty) {
+      displaySalonType =
+          rawSalonType[0].toUpperCase() + rawSalonType.substring(1);
+    }
 
     final String openingHours =
         salonData['openingHours']?.toString() ?? '10 AM';
@@ -220,16 +242,76 @@ class SalonDetailBottomSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 2. Shop Name, Ratings, Address, Open/Close Time
-                      Text(
-                        name,
-                        style: GoogleFonts.playfairDisplay(
-                          textStyle: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF05352F),
+                      // 2. Shop Name & Salon Type Badge
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: GoogleFonts.playfairDisplay(
+                                textStyle: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF05352F),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: displaySalonType == 'Male'
+                                  ? const Color(0xFFE3F2FD)
+                                  : displaySalonType == 'Female'
+                                      ? const Color(0xFFFFF8E1)
+                                      : const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: displaySalonType == 'Male'
+                                    ? const Color(0xFF2196F3).withValues(alpha: 0.4)
+                                    : displaySalonType == 'Female'
+                                        ? const Color(0xFFFFB300).withValues(alpha: 0.4)
+                                        : const Color(0xFF4CAF50).withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  displaySalonType == 'Male'
+                                      ? Icons.boy_rounded
+                                      : displaySalonType == 'Female'
+                                          ? Icons.girl_rounded
+                                          : Icons.people_rounded,
+                                  size: 14,
+                                  color: displaySalonType == 'Male'
+                                      ? const Color(0xFF1976D2)
+                                      : displaySalonType == 'Female'
+                                          ? const Color(0xFFF57F17)
+                                          : const Color(0xFF2E7D32),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  displaySalonType,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: displaySalonType == 'Male'
+                                        ? const Color(0xFF1976D2)
+                                        : displaySalonType == 'Female'
+                                            ? const Color(0xFFF57F17)
+                                            : const Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
 

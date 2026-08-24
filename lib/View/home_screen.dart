@@ -479,7 +479,7 @@ class HomeScreen extends StatelessWidget {
                   );
                 }
 
-                final top5 = salonsCtrl.salons.take(5).toList();
+                final top5 = salonsCtrl.filteredSalons.take(5).toList();
                 if (top5.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20.0),
