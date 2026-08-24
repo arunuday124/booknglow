@@ -122,6 +122,24 @@ class SalonsController extends GetxController {
     return salons.map((s) => s.toMap()).toList();
   }
 
+  /// Recommended salons for Home Screen matching selected gender toggle ('Male' / 'Female')
+  List<SalonModel> get recommendedSalons {
+    final currentGender = selectedGender.value.toLowerCase().trim();
+
+    return salons.where((salon) {
+      final type = salon.salonType.toLowerCase().trim();
+      if (type.isNotEmpty && type != 'unisex') {
+        if (currentGender == 'male' && type != 'male') {
+          return false;
+        }
+        if (currentGender == 'female' && type != 'female') {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
   /// Filtered list of salons matching gender toggle ('Male' / 'Female'), category and search query
   List<SalonModel> get filteredSalons {
     final query = searchQuery.value.toLowerCase().trim();

@@ -18,6 +18,8 @@ class AllSalonsScreen extends StatelessWidget {
     if (initialCategory != null &&
         controller.categories.contains(initialCategory)) {
       controller.updateCategory(initialCategory!);
+    } else {
+      controller.updateCategory('All');
     }
 
     // Local Text controller for the search field to clear/set state easily
@@ -32,33 +34,47 @@ class AllSalonsScreen extends StatelessWidget {
       }
     });
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF9F5),
-      appBar: AppBar(
+    void resetFilters() {
+      controller.updateCategory('All');
+      controller.clearSearch();
+    }
+
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          resetFilters();
+        }
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFFFAF9F5),
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF05352F).withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF05352F),
-              size: 18,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFAF9F5),
+          elevation: 0,
+          leading: Container(
+            margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF05352F).withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            onPressed: () => Get.back(),
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF05352F),
+                size: 18,
+              ),
+              onPressed: () {
+                resetFilters();
+                Get.back();
+              },
+            ),
           ),
-        ),
         title: Text(
           "Our Salons",
           style: GoogleFonts.playfairDisplay(
@@ -550,6 +566,7 @@ class AllSalonsScreen extends StatelessWidget {
         ),
       ],
     ),
-  );
+  ),
+);
   }
 }
