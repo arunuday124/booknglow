@@ -23,17 +23,17 @@ class BunnyCdnService {
 
       final Uint8List? compressedBytes =
           await FlutterImageCompress.compressWithFile(
-        file.absolute.path,
-        minWidth: 800,
-        minHeight: 800,
-        quality: 75,
-        format: CompressFormat.jpeg,
-      );
+            file.absolute.path,
+            minWidth: 800,
+            minHeight: 800,
+            quality: 75,
+            format: CompressFormat.jpeg,
+          );
 
       if (compressedBytes != null && compressedBytes.isNotEmpty) {
         final compressedSize = compressedBytes.length;
-        final percentSaved =
-            ((1 - (compressedSize / originalSize)) * 100).toStringAsFixed(1);
+        final percentSaved = ((1 - (compressedSize / originalSize)) * 100)
+            .toStringAsFixed(1);
         debugPrint(
           '✅ [BunnyCdnService] Compressed image size: ${(compressedSize / 1024).toStringAsFixed(1)} KB (Saved: $percentSaved%)',
         );
@@ -79,13 +79,13 @@ class BunnyCdnService {
         'https://$_storageHostname/$_storageZoneName/$_folderName/$fileName',
       );
 
-      debugPrint('🗑️ [BunnyCdnService] Deleting old image from BunnyCDN: $deleteUri');
+      debugPrint(
+        '🗑️ [BunnyCdnService] Deleting old image from BunnyCDN: $deleteUri',
+      );
 
       final response = await http.delete(
         deleteUri,
-        headers: {
-          'AccessKey': _accessKey,
-        },
+        headers: {'AccessKey': _accessKey},
       );
 
       debugPrint(
@@ -106,9 +106,7 @@ class BunnyCdnService {
         return false;
       }
     } catch (e) {
-      debugPrint(
-        '⚠️ [BunnyCdnService] Error deleting image from BunnyCDN: $e',
-      );
+      debugPrint('⚠️ [BunnyCdnService] Error deleting image from BunnyCDN: $e');
       return false;
     }
   }
@@ -127,14 +125,17 @@ class BunnyCdnService {
 
       // 2. Generate a clean unique timestamped filename (ensures immediate CDN cache freshness)
       final cleanUid = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
-      final fileName = 'user_${cleanUid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          'user_${cleanUid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       // 3. Construct BunnyCDN Storage API endpoint URL
       final uploadUri = Uri.parse(
         'https://$_storageHostname/$_storageZoneName/$_folderName/$fileName',
       );
 
-      debugPrint('🚀 [BunnyCdnService] Uploading compressed image to: $uploadUri');
+      debugPrint(
+        '🚀 [BunnyCdnService] Uploading compressed image to: $uploadUri',
+      );
 
       // 4. Execute HTTP PUT upload
       final response = await http.put(
