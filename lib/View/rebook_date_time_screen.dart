@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -46,7 +47,7 @@ class RebookDateTimeController extends GetxController {
     _initializeDefaultTime();
 
     // One-shot fetch of salon bookings to determine locked slots
-    fetchSalonBookings();
+    fetchSalonBookings(forceRefresh: true);
   }
 
   void _generateDates() {
@@ -149,7 +150,9 @@ class RebookDateTimeController extends GetxController {
       _salonBookingsDocs = docs;
       _reevaluateLockedSlots();
     } catch (e) {
-      debugPrint('⚠️ [RebookDateTimeController] Error fetching salon bookings: $e');
+      debugPrint(
+        '⚠️ [RebookDateTimeController] Error fetching salon bookings: $e',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -161,17 +164,53 @@ class RebookDateTimeController extends GetxController {
     if (_salonBookingsDocs.isEmpty) return;
 
     for (var doc in _salonBookingsDocs) {
-      final status =
-          (doc['bookingStatus']?.toString() ?? '').toLowerCase().trim();
-      // Only confirmed bookings lock the time slot
-      if (status != 'confirmed') {
+      final status = (doc['bookingStatus']?.toString() ??
+              doc['status']?.toString() ??
+              doc['booking_status']?.toString() ??
+              '')
+          .toLowerCase()
+          .trim();
+      final isLocked = doc['isLocked'] == true;
+
+      // Lock slot if confirmed/accepted or explicitly isLocked
+      if (status != 'confirmed' && status != 'accepted' && !isLocked) {
         continue;
       }
 
-      final docDateRaw = doc['date']?.toString() ?? '';
-      final docTimeRaw = doc['time']?.toString() ?? '';
+      final docDateRaw = doc['date'] ?? doc['dateTime'] ?? doc['scheduledAt'];
+      if (!_isSameDate(docDateRaw, date)) {
+        continue;
+      }
 
-      if (_isSameDate(docDateRaw, date)) {
+      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '').toString().trim();
+      if (docTimeRaw.isEmpty) continue;
+
+      // Parse all time matches in docTimeRaw (e.g. "10:00 AM - 11:30 AM" or "10:00 AM")
+      final matches = RegExp(
+        r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+        caseSensitive: false,
+      ).allMatches(docTimeRaw).toList();
+
+      if (matches.isNotEmpty) {
+        final startMins = _parseToMinutes(matches[0].group(0)!);
+        if (startMins != null) {
+          int endMins;
+          if (matches.length > 1) {
+            endMins = _parseToMinutes(matches[1].group(0)!) ?? (startMins + 30);
+          } else {
+            endMins = startMins + 30;
+          }
+
+          for (var slot in availableTimes) {
+            final slotMins = _parseToMinutes(slot);
+            if (slotMins != null) {
+              if (slotMins >= startMins && slotMins < endMins) {
+                lockedTimeSlots.add(slot);
+              }
+            }
+          }
+        }
+      } else {
         final normalizedDocTime = _normalizeTime(docTimeRaw);
         if (normalizedDocTime != null) {
           for (var slot in availableTimes) {
@@ -215,24 +254,42 @@ class RebookDateTimeController extends GetxController {
   static int? _parseToMinutes(String timeStr) {
     if (timeStr.isEmpty) return null;
 
-    final upper = timeStr.toUpperCase();
-    final isPM = upper.contains('PM');
-    final isAM = upper.contains('AM');
+    final match = RegExp(
+      r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+      caseSensitive: false,
+    ).firstMatch(timeStr);
 
-    final cleanStr = upper.replaceAll(RegExp(r'[^0-9:]'), '').trim();
-    if (cleanStr.isEmpty) return null;
+    if (match != null) {
+      int hour = int.tryParse(match.group(1)!) ?? 0;
+      final minute = int.tryParse(match.group(2)!) ?? 0;
+      final period = match.group(3)?.toUpperCase();
 
-    final parts = cleanStr.split(':');
-    int hour = int.tryParse(parts[0]) ?? 0;
-    int minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      if (period == 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
 
-    if (isPM && hour < 12) {
-      hour += 12;
-    } else if (isAM && hour == 12) {
-      hour = 0;
+      return hour * 60 + minute;
     }
 
-    return hour * 60 + minute;
+    final simpleMatch = RegExp(
+      r'(\d{1,2})\s*(AM|PM)',
+      caseSensitive: false,
+    ).firstMatch(timeStr);
+
+    if (simpleMatch != null) {
+      int hour = int.tryParse(simpleMatch.group(1)!) ?? 0;
+      final period = simpleMatch.group(2)?.toUpperCase();
+      if (period == 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+      return hour * 60;
+    }
+
+    return null;
   }
 
   static String? _normalizeTime(String timeStr) {
@@ -253,50 +310,67 @@ class RebookDateTimeController extends GetxController {
     return '$formattedHour:$formattedMin $period';
   }
 
-  bool _isSameDate(String docDateRaw, DateTime target) {
-    if (docDateRaw.isEmpty) return false;
-    final docLower = docDateRaw.toLowerCase().trim();
+  bool _isSameDate(dynamic docDateRaw, DateTime target) {
+    if (docDateRaw == null) return false;
 
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final formatted1 =
-        "${days[target.weekday - 1]}, ${months[target.month - 1]} ${target.day}, ${target.year}"
-            .toLowerCase();
+    if (docDateRaw is Timestamp) {
+      final dt = docDateRaw.toDate();
+      return dt.year == target.year &&
+          dt.month == target.month &&
+          dt.day == target.day;
+    }
 
-    if (docLower == formatted1) return true;
+    if (docDateRaw is DateTime) {
+      return docDateRaw.year == target.year &&
+          docDateRaw.month == target.month &&
+          docDateRaw.day == target.day;
+    }
 
-    final formatted2 =
-        "${target.year}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}"
-            .toLowerCase();
-    if (docLower == formatted2) return true;
+    final dateStr = docDateRaw.toString().trim();
+    if (dateStr.isEmpty) return false;
 
-    final parsed = DateTime.tryParse(docDateRaw);
+    // Direct ISO string parse check
+    final parsed = DateTime.tryParse(dateStr);
     if (parsed != null) {
       return parsed.year == target.year &&
           parsed.month == target.month &&
           parsed.day == target.day;
     }
 
-    final monthStr = months[target.month - 1].toLowerCase();
-    final dayStr = target.day.toString();
-    final yearStr = target.year.toString();
-    if (docLower.contains(monthStr) &&
-        docLower.contains(dayStr) &&
-        docLower.contains(yearStr)) {
-      return true;
+    final docLower = dateStr.toLowerCase();
+    const months = [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ];
+
+    final targetMonthName = months[target.month - 1];
+
+    // Extract year
+    final yearMatch = RegExp(r'\b(20\d{2})\b').firstMatch(docLower);
+    final docYear = yearMatch != null ? int.tryParse(yearMatch.group(1)!) : null;
+
+    // Extract day
+    final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(
+      docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''),
+    );
+    final docDay = dayMatch != null ? int.tryParse(dayMatch.group(1)!) : null;
+
+    if (docYear != null && docDay != null) {
+      if (docYear == target.year &&
+          docDay == target.day &&
+          docLower.contains(targetMonthName)) {
+        return true;
+      }
     }
 
     return false;
@@ -332,8 +406,7 @@ class RebookDateTimeController extends GetxController {
       selectedTime.value = normalizedOrig;
     } else if (!validTimes.contains(selectedTime.value) ||
         isSlotLocked(selectedTime.value)) {
-      final available =
-          validTimes.where((t) => !isSlotLocked(t)).toList();
+      final available = validTimes.where((t) => !isSlotLocked(t)).toList();
       if (available.isNotEmpty) {
         selectedTime.value = available.first;
       } else {
@@ -593,18 +666,22 @@ class RebookDateTimeScreen extends StatelessWidget {
                 final isSameTime = controller.useSameTimeAsLast.value;
                 final selDate = controller.selectedDate.value;
                 final validTimes = controller.filteredAvailableTimes;
-                final normOrig =
-                    RebookDateTimeController._normalizeTime(originalTime.trim());
+                final normOrig = RebookDateTimeController._normalizeTime(
+                  originalTime.trim(),
+                );
                 final isOrigLocked =
                     normOrig != null && controller.isSlotLocked(normOrig);
                 final isOrigPassed =
                     normOrig == null || !validTimes.contains(normOrig);
 
-                String statusSubtitle = "Rebook for ${_formatMonthDay(selDate)} at ${originalTime.isNotEmpty ? originalTime : '10:00 AM'}";
+                String statusSubtitle =
+                    "Rebook for ${_formatMonthDay(selDate)} at ${originalTime.isNotEmpty ? originalTime : '10:00 AM'}";
                 if (isOrigPassed) {
-                  statusSubtitle = "Previous slot ($originalTime) is in the past for today";
+                  statusSubtitle =
+                      "Previous slot ($originalTime) is in the past for today";
                 } else if (isOrigLocked) {
-                  statusSubtitle = "Previous slot ($originalTime) is already booked for this date";
+                  statusSubtitle =
+                      "Previous slot ($originalTime) is already booked for this date";
                 }
 
                 return Container(
@@ -697,14 +774,16 @@ class RebookDateTimeScreen extends StatelessWidget {
                       color: const Color(0xFF05352F),
                     ),
                   ),
-                  Obx(() => Text(
-                        _formatMonthDay(controller.selectedDate.value),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9E7E45),
-                        ),
-                      )),
+                  Obx(
+                    () => Text(
+                      _formatMonthDay(controller.selectedDate.value),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF9E7E45),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -720,7 +799,8 @@ class RebookDateTimeScreen extends StatelessWidget {
 
                     return Obx(() {
                       final currentSelDate = controller.selectedDate.value;
-                      final isSelected = currentSelDate.year == date.year &&
+                      final isSelected =
+                          currentSelDate.year == date.year &&
                           currentSelDate.month == date.month &&
                           currentSelDate.day == date.day;
 
@@ -738,13 +818,17 @@ class RebookDateTimeScreen extends StatelessWidget {
                             border: Border.all(
                               color: isSelected
                                   ? const Color(0xFF05352F)
-                                  : const Color(0xFFE8D5AF).withValues(alpha: 0.3),
+                                  : const Color(
+                                      0xFFE8D5AF,
+                                    ).withValues(alpha: 0.3),
                               width: isSelected ? 1.5 : 1,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: isSelected
-                                    ? const Color(0xFF05352F).withValues(alpha: 0.15)
+                                    ? const Color(
+                                        0xFF05352F,
+                                      ).withValues(alpha: 0.15)
                                     : const Color.fromRGBO(0, 0, 0, 0.02),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
@@ -900,7 +984,9 @@ class RebookDateTimeScreen extends StatelessWidget {
                                   ? const Color(0xFFD6CFC4)
                                   : isSelected
                                   ? const Color(0xFF05352F)
-                                  : const Color(0xFFE8D5AF).withValues(alpha: 0.3),
+                                  : const Color(
+                                      0xFFE8D5AF,
+                                    ).withValues(alpha: 0.3),
                               width: isSelected ? 1.5 : 1,
                             ),
                             boxShadow: isLocked
@@ -908,7 +994,9 @@ class RebookDateTimeScreen extends StatelessWidget {
                                 : [
                                     BoxShadow(
                                       color: isSelected
-                                          ? const Color(0xFF05352F).withValues(alpha: 0.15)
+                                          ? const Color(
+                                              0xFF05352F,
+                                            ).withValues(alpha: 0.15)
                                           : const Color.fromRGBO(0, 0, 0, 0.02),
                                       blurRadius: 6,
                                       offset: const Offset(0, 3),
@@ -1019,7 +1107,9 @@ class RebookDateTimeScreen extends StatelessWidget {
                         margin: const EdgeInsets.all(16),
                         borderRadius: 12,
                       );
-                    } else if (controller.isSlotLocked(controller.selectedTime.value)) {
+                    } else if (controller.isSlotLocked(
+                      controller.selectedTime.value,
+                    )) {
                       Get.snackbar(
                         'Slot Locked',
                         'The chosen time slot is already booked. Please choose an available slot.',
@@ -1078,18 +1168,16 @@ class RebookDateTimeScreen extends StatelessWidget {
         color: isLocked ? const Color(0xFFEFECE6) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isLocked ? const Color(0xFFD6CFC4) : const Color(0xFFE8D5AF).withValues(alpha: 0.3),
+          color: isLocked
+              ? const Color(0xFFD6CFC4)
+              : const Color(0xFFE8D5AF).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isLocked)
-            const Icon(
-              Icons.lock_rounded,
-              size: 10,
-              color: Color(0xFF9E9588),
-            )
+            const Icon(Icons.lock_rounded, size: 10, color: Color(0xFF9E9588))
           else
             Container(
               width: 6,
@@ -1105,7 +1193,9 @@ class RebookDateTimeScreen extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: isLocked ? const Color(0xFF9E9588) : const Color(0xFF05352F),
+              color: isLocked
+                  ? const Color(0xFF9E9588)
+                  : const Color(0xFF05352F),
             ),
           ),
         ],

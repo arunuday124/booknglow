@@ -84,11 +84,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.spa_outlined,
-              color: Color(0xFFE8D5AF),
-              size: 48,
-            ),
+            const Icon(Icons.spa_outlined, color: Color(0xFFE8D5AF), size: 48),
             const SizedBox(height: 8),
             Text(
               "Book'N'Glow Experience",
@@ -134,13 +130,14 @@ class SalonDetailBottomSheet extends StatelessWidget {
 
     final String name = salonData['name'] ?? 'Luxury Salon';
     final String location = salonData['location'] ?? 'Downtown';
-    final String rawSalonType = (salonData['salonType'] ??
-            salonData['gender'] ??
-            salonData['type'] ??
-            salonData['salon_type'] ??
-            'Unisex')
-        .toString()
-        .trim();
+    final String rawSalonType =
+        (salonData['salonType'] ??
+                salonData['gender'] ??
+                salonData['type'] ??
+                salonData['salon_type'] ??
+                'Unisex')
+            .toString()
+            .trim();
 
     String displaySalonType = 'Unisex';
     final lowerType = rawSalonType.toLowerCase();
@@ -163,13 +160,14 @@ class SalonDetailBottomSheet extends StatelessWidget {
     final String phone = salonData['phone']?.toString() ?? '';
     final String ownerName = salonData['ownerName']?.toString() ?? '';
 
-    final String rawImage = (salonData['shopImage'] ??
-            salonData['image'] ??
-            salonData['shop_image'] ??
-            salonData['photoUrl'] ??
-            '')
-        .toString()
-        .trim();
+    final String rawImage =
+        (salonData['shopImage'] ??
+                salonData['image'] ??
+                salonData['shop_image'] ??
+                salonData['photoUrl'] ??
+                '')
+            .toString()
+            .trim();
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
@@ -234,13 +232,21 @@ class SalonDetailBottomSheet extends StatelessWidget {
                 ],
               ),
 
-              // Scrollable Content
+              // Scrollable Content with Pull-Down Refresh
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: RefreshIndicator(
+                  color: const Color(0xFF05352F),
+                  backgroundColor: Colors.white,
+                  onRefresh: () async {
+                    await controller.fetchBookedSlots(forceRefresh: true);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 2. Shop Name & Salon Type Badge
                       Row(
@@ -268,15 +274,21 @@ class SalonDetailBottomSheet extends StatelessWidget {
                               color: displaySalonType == 'Male'
                                   ? const Color(0xFFE3F2FD)
                                   : displaySalonType == 'Female'
-                                      ? const Color(0xFFFFF8E1)
-                                      : const Color(0xFFE8F5E9),
+                                  ? const Color(0xFFFFF8E1)
+                                  : const Color(0xFFE8F5E9),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: displaySalonType == 'Male'
-                                    ? const Color(0xFF2196F3).withValues(alpha: 0.4)
+                                    ? const Color(
+                                        0xFF2196F3,
+                                      ).withValues(alpha: 0.4)
                                     : displaySalonType == 'Female'
-                                        ? const Color(0xFFFFB300).withValues(alpha: 0.4)
-                                        : const Color(0xFF4CAF50).withValues(alpha: 0.4),
+                                    ? const Color(
+                                        0xFFFFB300,
+                                      ).withValues(alpha: 0.4)
+                                    : const Color(
+                                        0xFF4CAF50,
+                                      ).withValues(alpha: 0.4),
                               ),
                             ),
                             child: Row(
@@ -286,14 +298,14 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                   displaySalonType == 'Male'
                                       ? Icons.boy_rounded
                                       : displaySalonType == 'Female'
-                                          ? Icons.girl_rounded
-                                          : Icons.people_rounded,
+                                      ? Icons.girl_rounded
+                                      : Icons.people_rounded,
                                   size: 14,
                                   color: displaySalonType == 'Male'
                                       ? const Color(0xFF1976D2)
                                       : displaySalonType == 'Female'
-                                          ? const Color(0xFFF57F17)
-                                          : const Color(0xFF2E7D32),
+                                      ? const Color(0xFFF57F17)
+                                      : const Color(0xFF2E7D32),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -304,8 +316,8 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                     color: displaySalonType == 'Male'
                                         ? const Color(0xFF1976D2)
                                         : displaySalonType == 'Female'
-                                            ? const Color(0xFFF57F17)
-                                            : const Color(0xFF2E7D32),
+                                        ? const Color(0xFFF57F17)
+                                        : const Color(0xFF2E7D32),
                                   ),
                                 ),
                               ],
@@ -443,15 +455,85 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // 3. Date Selector
-                      Text(
-                        "Select Date",
-                        style: GoogleFonts.playfairDisplay(
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF05352F),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Select Date",
+                            style: GoogleFonts.playfairDisplay(
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF05352F),
+                              ),
+                            ),
                           ),
-                        ),
+                          Obx(() {
+                            final isRefreshing =
+                                controller.isRefreshingSlots.value;
+                            return Tooltip(
+                              message: "Refresh availability",
+                              child: InkWell(
+                                onTap: isRefreshing
+                                    ? null
+                                    : () => controller.fetchBookedSlots(
+                                        forceRefresh: true,
+                                      ),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFAF6EE),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF9E7E45)
+                                          .withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      isRefreshing
+                                          ? const SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 1.8,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(
+                                                  Color(0xFF9E7E45),
+                                                ),
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.refresh_rounded,
+                                              size: 13,
+                                              color: Color(0xFF9E7E45),
+                                            ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isRefreshing
+                                            ? "Refreshing..."
+                                            : "Refresh",
+                                        style: GoogleFonts.plusJakartaSans(
+                                          textStyle: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF9E7E45),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                       const SizedBox(height: 12),
 
@@ -547,15 +629,61 @@ class SalonDetailBottomSheet extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // 4. Time Selector
-                      Text(
-                        "Select Time",
-                        style: GoogleFonts.playfairDisplay(
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF05352F),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Select Time",
+                            style: GoogleFonts.playfairDisplay(
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF05352F),
+                              ),
+                            ),
                           ),
-                        ),
+                          Obx(() {
+                            final dur = controller.formattedTotalDuration;
+                            if (controller.totalDurationMinutes <= 0) {
+                              return const SizedBox.shrink();
+                            }
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFAF6EE),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFF9E7E45).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    size: 13,
+                                    color: Color(0xFF9E7E45),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    dur,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      textStyle: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF9E7E45),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                       const SizedBox(height: 12),
 
@@ -598,11 +726,37 @@ class SalonDetailBottomSheet extends StatelessWidget {
                               final timeSlot = times[index];
 
                               return Obx(() {
-                                final isSelected =
-                                    controller.selectedTime.value == timeSlot;
+                                final isStart =
+                                    controller.isWindowStartSlot(timeSlot);
+                                final isInWindow =
+                                    controller.isSlotInSelectedWindow(timeSlot);
                                 final isLocked = controller.isSlotLocked(
                                   timeSlot,
                                 );
+
+                                Color bgColor;
+                                Color borderColor;
+                                Color textColor;
+
+                                if (isLocked) {
+                                  bgColor = const Color(0xFFEFECE6);
+                                  borderColor = const Color(0xFFD6CFC4);
+                                  textColor = const Color(0xFF9E9588);
+                                } else if (isStart) {
+                                  bgColor = const Color(0xFF05352F);
+                                  borderColor = const Color(0xFF05352F);
+                                  textColor = Colors.white;
+                                } else if (isInWindow) {
+                                  bgColor = const Color(0xFFE8F2EF);
+                                  borderColor = const Color(0xFF05352F);
+                                  textColor = const Color(0xFF05352F);
+                                } else {
+                                  bgColor = Colors.white;
+                                  borderColor = const Color(
+                                    0xFFE8D5AF,
+                                  ).withValues(alpha: 0.3);
+                                  textColor = const Color(0xFF05352F);
+                                }
 
                                 return GestureDetector(
                                   onTap: isLocked
@@ -611,57 +765,58 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                             'Slot Locked',
                                             'This time slot ($timeSlot) is already booked and locked.',
                                             snackPosition: SnackPosition.BOTTOM,
-                                            backgroundColor: const Color.fromARGB(
-                                              255,
-                                              219,
-                                              62,
-                                              5,
-                                            ),
+                                            backgroundColor:
+                                                const Color.fromARGB(
+                                                  255,
+                                                  219,
+                                                  62,
+                                                  5,
+                                                ),
                                             colorText: Colors.white,
                                             margin: const EdgeInsets.all(16),
                                             borderRadius: 12,
-                                            duration: const Duration(seconds: 2),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
                                           );
                                         }
                                       : () => controller.selectTime(timeSlot),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(right: 12),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeInOut,
+                                    margin: const EdgeInsets.only(right: 10),
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
+                                      horizontal: 14,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isLocked
-                                          ? const Color(0xFFEFECE6)
-                                          : isSelected
-                                          ? const Color(0xFF05352F)
-                                          : Colors.white,
+                                      color: bgColor,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: isLocked
-                                            ? const Color(0xFFD6CFC4)
-                                            : isSelected
-                                            ? const Color(0xFF05352F)
-                                            : const Color(
-                                                0xFFE8D5AF,
-                                              ).withValues(alpha: 0.3),
-                                        width: 1,
+                                        color: borderColor,
+                                        width: (isStart || isInWindow) ? 1.5 : 1,
                                       ),
                                       boxShadow: isLocked
                                           ? []
-                                          : [
+                                          : (isStart || isInWindow)
+                                          ? [
                                               BoxShadow(
-                                                color: isSelected
-                                                    ? const Color(
-                                                        0xFF05352F,
-                                                      ).withValues(alpha: 0.15)
-                                                    : const Color.fromRGBO(
-                                                        0,
-                                                        0,
-                                                        0,
-                                                        0.02,
-                                                      ),
+                                                color: const Color(
+                                                  0xFF05352F,
+                                                ).withValues(alpha: 0.12),
                                                 blurRadius: 6,
                                                 offset: const Offset(0, 3),
+                                              ),
+                                            ]
+                                          : [
+                                              const BoxShadow(
+                                                color: Color.fromRGBO(
+                                                  0,
+                                                  0,
+                                                  0,
+                                                  0.02,
+                                                ),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2),
                                               ),
                                             ],
                                     ),
@@ -672,22 +827,28 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                         if (isLocked) ...[
                                           const Icon(
                                             Icons.lock_rounded,
-                                            size: 14,
+                                            size: 13,
                                             color: Color(0xFF9E9588),
                                           ),
-                                          const SizedBox(width: 6),
+                                          const SizedBox(width: 5),
+                                        ] else if (isInWindow && !isStart) ...[
+                                          const Icon(
+                                            Icons.link_rounded,
+                                            size: 13,
+                                            color: Color(0xFF05352F),
+                                          ),
+                                          const SizedBox(width: 4),
                                         ],
                                         Text(
                                           timeSlot,
                                           style: GoogleFonts.plusJakartaSans(
                                             textStyle: TextStyle(
                                               fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              color: isLocked
-                                                  ? const Color(0xFF9E9588)
-                                                  : isSelected
-                                                  ? Colors.white
-                                                  : const Color(0xFF05352F),
+                                              fontWeight:
+                                                  (isStart || isInWindow)
+                                                      ? FontWeight.w800
+                                                      : FontWeight.w600,
+                                              color: textColor,
                                             ),
                                           ),
                                         ),
@@ -697,6 +858,124 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                 );
                               });
                             },
+                          ),
+                        );
+                      }),
+
+                      // Dynamic Selected Time Window Animated Card
+                      Obx(() {
+                        if (controller.selectedTime.value.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        final timeRange = controller.dynamicTimeRange;
+                        final dur = controller.formattedTotalDuration;
+                        final slotCount = controller.totalSlotCount;
+
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          margin: const EdgeInsets.only(top: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFFAF6EE),
+                                const Color(0xFFF2ECE0),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF9E7E45,
+                              ).withValues(alpha: 0.35),
+                              width: 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF05352F,
+                                ).withValues(alpha: 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF05352F),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.access_time_filled_rounded,
+                                          size: 13,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Selected Window",
+                                        style: GoogleFonts.plusJakartaSans(
+                                          textStyle: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF05352F),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF05352F),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      "$slotCount slot${slotCount > 1 ? 's' : ''} • $dur",
+                                      style: GoogleFonts.plusJakartaSans(
+                                        textStyle: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                timeRange,
+                                style: GoogleFonts.plusJakartaSans(
+                                  textStyle: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF05352F),
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }),
@@ -732,7 +1011,9 @@ class SalonDetailBottomSheet extends StatelessWidget {
                             color: const Color(0xFFFAF9F5),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFFE8D5AF).withValues(alpha: 0.4),
+                              color: const Color(
+                                0xFFE8D5AF,
+                              ).withValues(alpha: 0.4),
                               width: 1,
                             ),
                           ),
@@ -780,7 +1061,9 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
-                                        ? const Color(0xFF9E7E45).withValues(alpha: 0.5)
+                                        ? const Color(
+                                            0xFF9E7E45,
+                                          ).withValues(alpha: 0.5)
                                         : const Color(
                                             0xFFE8D5AF,
                                           ).withValues(alpha: 0.2),
@@ -833,6 +1116,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
 
               // Bottom Booking Bar
               Container(
@@ -927,7 +1211,9 @@ class SalonDetailBottomSheet extends StatelessWidget {
                               final selectedDate =
                                   controller.selectedDate.value!;
                               final selectedTime =
-                                  controller.selectedTime.value;
+                                  controller.dynamicTimeRange.isNotEmpty
+                                      ? controller.dynamicTimeRange
+                                      : controller.selectedTime.value;
                               final selectedServices = controller
                                   .availableServices
                                   .where(

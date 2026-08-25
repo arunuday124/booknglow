@@ -26,10 +26,23 @@ class NotificationsController extends GetxController {
     isLoading.value = true;
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('notification')
-          .where('userId', isEqualTo: uid)
-          .get();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        // Query only confirmed/delivered notifications (sentAt != null) to save document reads
+        snapshot = await FirebaseFirestore.instance
+            .collection('notification')
+            .where('userId', isEqualTo: uid)
+            .where('sentAt', isNull: false)
+            .get();
+      } catch (filterErr) {
+        debugPrint(
+          '⚠️ [NotificationsController] Filtered query fallback: $filterErr',
+        );
+        snapshot = await FirebaseFirestore.instance
+            .collection('notification')
+            .where('userId', isEqualTo: uid)
+            .get();
+      }
 
       final List<Map<String, dynamic>> list = [];
 

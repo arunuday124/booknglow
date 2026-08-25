@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -70,6 +72,7 @@ class BookingService {
         '🔥 [BookingService] Writing booking to Firestore: $bookingData',
       );
       final docRef = await _bookingsCol.add(bookingData);
+      clearSalonBookingsCache(salonId);
       debugPrint(
         '✅ [BookingService] Booking document created with ID: ${docRef.id}',
       );
@@ -262,7 +265,8 @@ class BookingService {
   }
 
   // In-memory cache for salon booked slots: salonId -> list of booking maps
-  static final Map<String, List<Map<String, dynamic>>> _cachedSalonBookings = {};
+  static final Map<String, List<Map<String, dynamic>>> _cachedSalonBookings =
+      {};
   static final Map<String, DateTime> _cachedSalonBookingsTimestamp = {};
 
   /// Clears all in-memory bookings cache (e.g. on user logout)
@@ -305,10 +309,27 @@ class BookingService {
 
     try {
       debugPrint(
-        '🔥 [BookingService] Fetching fresh bookings for salon $salonId from Firestore...',
+        '🔥 [BookingService] Fetching confirmed bookings for salon $salonId from Firestore...',
       );
-      final snapshot =
-          await _bookingsCol.where('salonId', isEqualTo: salonId).get();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        // Query ONLY confirmed/accepted bookings to minimize Firestore document reads
+        snapshot = await _bookingsCol
+            .where('salonId', isEqualTo: salonId)
+            .where(
+              'bookingStatus',
+              whereIn: ['Confirmed', 'confirmed', 'Accepted', 'accepted'],
+            )
+            .get();
+      } catch (filterErr) {
+        log(
+          '⚠️ [BookingService] Filtered query fallback to salonId only: $filterErr',
+        );
+        snapshot = await _bookingsCol
+            .where('salonId', isEqualTo: salonId)
+            .get();
+      }
+
       final list = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
@@ -319,7 +340,7 @@ class BookingService {
       _cachedSalonBookingsTimestamp[salonId] = DateTime.now();
 
       debugPrint(
-        '✅ [BookingService] Cached ${list.length} bookings for salon $salonId.',
+        '✅ [BookingService] Cached ${list.length} active/confirmed bookings for salon $salonId.',
       );
       return list;
     } catch (e) {

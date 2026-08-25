@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,7 +38,8 @@ class SalonsController extends GetxController {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedGender = prefs.getString(_genderPrefKey);
-      if (savedGender != null && (savedGender == 'Female' || savedGender == 'Male')) {
+      if (savedGender != null &&
+          (savedGender == 'Female' || savedGender == 'Male')) {
         selectedGender.value = savedGender;
       } else {
         // Default stays Female and is saved to preferences
@@ -144,7 +146,9 @@ class SalonsController extends GetxController {
   List<SalonModel> get filteredSalons {
     final query = searchQuery.value.toLowerCase().trim();
     final category = selectedCategory.value.toLowerCase().trim();
-    final currentGender = selectedGender.value.toLowerCase().trim(); // 'male' or 'female'
+    final currentGender = selectedGender.value
+        .toLowerCase()
+        .trim(); // 'male' or 'female'
 
     return salons.where((salon) {
       // 1. Gender filtering based on salonType ('male', 'female', or 'unisex')
@@ -209,6 +213,7 @@ class SalonDetailController extends GetxController {
   final RxString selectedTime = ''.obs;
   final RxSet<String> selectedServices = <String>{}.obs;
   final RxSet<String> lockedTimeSlots = <String>{}.obs;
+  final RxBool isRefreshingSlots = false.obs;
 
   List<Map<String, dynamic>> _salonBookingsDocs = [];
 
@@ -287,24 +292,42 @@ class SalonDetailController extends GetxController {
   int? _parseToMinutes(String timeStr) {
     if (timeStr.isEmpty) return null;
 
-    final upper = timeStr.toUpperCase();
-    final isPM = upper.contains('PM');
-    final isAM = upper.contains('AM');
+    final match = RegExp(
+      r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+      caseSensitive: false,
+    ).firstMatch(timeStr);
 
-    final cleanStr = upper.replaceAll(RegExp(r'[^0-9:]'), '').trim();
-    if (cleanStr.isEmpty) return null;
+    if (match != null) {
+      int hour = int.tryParse(match.group(1)!) ?? 0;
+      final minute = int.tryParse(match.group(2)!) ?? 0;
+      final period = match.group(3)?.toUpperCase();
 
-    final parts = cleanStr.split(':');
-    int hour = int.tryParse(parts[0]) ?? 0;
-    int minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      if (period == 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
 
-    if (isPM && hour < 12) {
-      hour += 12;
-    } else if (isAM && hour == 12) {
-      hour = 0;
+      return hour * 60 + minute;
     }
 
-    return hour * 60 + minute;
+    final simpleMatch = RegExp(
+      r'(\d{1,2})\s*(AM|PM)',
+      caseSensitive: false,
+    ).firstMatch(timeStr);
+
+    if (simpleMatch != null) {
+      int hour = int.tryParse(simpleMatch.group(1)!) ?? 0;
+      final period = simpleMatch.group(2)?.toUpperCase();
+      if (period == 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+      return hour * 60;
+    }
+
+    return null;
   }
 
   void _generateServices() {
@@ -453,9 +476,122 @@ class SalonDetailController extends GetxController {
     */
   }
 
+  // Parse any duration string format e.g. "30 min", "1 hr", "45 mins", "1.5 hr", "1 hr 30 min"
+  int parseDurationToMinutes(String durationStr) {
+    if (durationStr.trim().isEmpty) return 30;
+    final lower = durationStr.toLowerCase().trim();
+
+    int totalMins = 0;
+
+    final hrMatch =
+        RegExp(r'(\d+(?:\.\d+)?)\s*(?:hr|hour|h)\b').firstMatch(lower);
+    if (hrMatch != null) {
+      final hrs = double.tryParse(hrMatch.group(1) ?? '0') ?? 0;
+      totalMins += (hrs * 60).round();
+    }
+
+    final minMatch = RegExp(r'(\d+)\s*(?:min|minute|m)\b').firstMatch(lower);
+    if (minMatch != null) {
+      final mins = int.tryParse(minMatch.group(1) ?? '0') ?? 0;
+      totalMins += mins;
+    }
+
+    if (totalMins == 0) {
+      final digitMatch = RegExp(r'(\d+)').firstMatch(lower);
+      if (digitMatch != null) {
+        totalMins = int.tryParse(digitMatch.group(1) ?? '30') ?? 30;
+      }
+    }
+
+    return totalMins > 0 ? totalMins : 30;
+  }
+
+  // Computed total duration in minutes of all currently selected services
+  int get totalDurationMinutes {
+    selectedServices.length; // Rx dependency tracking for Obx
+    int total = 0;
+    for (var service in availableServices) {
+      if (selectedServices.contains(service['name'])) {
+        final dStr = service['duration']?.toString() ?? '';
+        total += parseDurationToMinutes(dStr);
+      }
+    }
+    return total;
+  }
+
+  // Number of 30-min slots covered by current duration
+  int get totalSlotCount {
+    final mins = totalDurationMinutes;
+    if (mins <= 0) return 1;
+    final count = (mins / 30).ceil();
+    return count > 0 ? count : 1;
+  }
+
+  // Human-readable total duration string e.g. "45 min" or "1 hr 15 min"
+  String get formattedTotalDuration {
+    final mins = totalDurationMinutes;
+    if (mins <= 0) return '30 min';
+    final hrs = mins ~/ 60;
+    final remainingMins = mins % 60;
+
+    if (hrs > 0 && remainingMins > 0) {
+      return '$hrs hr $remainingMins min';
+    } else if (hrs > 0) {
+      return hrs == 1 ? '1 hr' : '$hrs hrs';
+    } else {
+      return '$remainingMins min';
+    }
+  }
+
+  // Calculates the end time given a starting time string and duration in minutes
+  String calculateEndTime(String startTimeStr, int durationMinutes) {
+    final startMins = _parseToMinutes(startTimeStr);
+    if (startMins == null) return startTimeStr;
+
+    final dur = durationMinutes > 0 ? durationMinutes : 30;
+    final endMins = startMins + dur;
+    final totalMins = endMins % (24 * 60);
+    final hour = totalMins ~/ 60;
+    final min = totalMins % 60;
+
+    final period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour % 12;
+    if (displayHour == 0) displayHour = 12;
+
+    final formattedHour = displayHour.toString().padLeft(2, '0');
+    final formattedMin = min.toString().padLeft(2, '0');
+
+    return '$formattedHour:$formattedMin $period';
+  }
+
+  // Full dynamic time range string e.g. "10:00 AM - 11:30 AM"
+  String get dynamicTimeRange {
+    if (selectedTime.value.isEmpty) return '';
+    final duration = totalDurationMinutes > 0 ? totalDurationMinutes : 30;
+    final endTime = calculateEndTime(selectedTime.value, duration);
+    return '${selectedTime.value} - $endTime';
+  }
+
+  // Returns true if the given slot is the start slot of the selected window
+  bool isWindowStartSlot(String timeSlot) {
+    return selectedTime.value == timeSlot;
+  }
+
+  // Returns true if the given slot falls inside the active dynamic window [start, start + duration)
+  bool isSlotInSelectedWindow(String timeSlot) {
+    if (selectedTime.value.isEmpty) return false;
+    final startMins = _parseToMinutes(selectedTime.value);
+    final slotMins = _parseToMinutes(timeSlot);
+    if (startMins == null || slotMins == null) return false;
+
+    final duration = totalDurationMinutes > 0 ? totalDurationMinutes : 30;
+    return slotMins >= startMins && slotMins < (startMins + duration);
+  }
+
   // Computed totalPrice
   double get totalPrice {
-    selectedServices.length; // Access Rx list so Obx observers always register even when availableServices is empty
+    selectedServices
+        .length; // Access Rx list so Obx observers always register even when availableServices is empty
     double total = 0;
     for (var service in availableServices) {
       if (selectedServices.contains(service['name'])) {
@@ -481,6 +617,7 @@ class SalonDetailController extends GetxController {
             .toString();
     if (salonId.isEmpty) return;
 
+    if (forceRefresh) isRefreshingSlots.value = true;
     try {
       _salonBookingsDocs = await BookingService.getBookingsForSalon(
         salonId,
@@ -491,6 +628,12 @@ class SalonDetailController extends GetxController {
       debugPrint(
         '⚠️ [SalonDetailController] Error fetching salon bookings: $e',
       );
+    } finally {
+      if (forceRefresh) {
+        // Small delay so user sees smooth feedback
+        await Future.delayed(const Duration(milliseconds: 300));
+        isRefreshingSlots.value = false;
+      }
     }
   }
 
@@ -500,18 +643,67 @@ class SalonDetailController extends GetxController {
     if (date == null || _salonBookingsDocs.isEmpty) return;
 
     for (var doc in _salonBookingsDocs) {
-      final status = (doc['bookingStatus']?.toString() ?? '')
+      final status = (doc['bookingStatus']?.toString() ??
+              doc['status']?.toString() ??
+              doc['booking_status']?.toString() ??
+              '')
           .toLowerCase()
           .trim();
-      // Lock slot ONLY if bookingStatus is "Confirmed"
-      if (status != 'confirmed') {
+      final isLocked = doc['isLocked'] == true;
+
+      // Lock slot if bookingStatus is confirmed/accepted or isLocked is true
+      if (status != 'confirmed' && status != 'accepted' && !isLocked) {
         continue;
       }
 
-      final docDateRaw = doc['date']?.toString() ?? '';
-      final docTimeRaw = doc['time']?.toString() ?? '';
+      final docDateRaw = doc['date'] ?? doc['dateTime'] ?? doc['scheduledAt'];
+      if (!_isSameDate(docDateRaw, date)) {
+        continue;
+      }
 
-      if (_isSameDate(docDateRaw, date)) {
+      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '').toString().trim();
+      if (docTimeRaw.isEmpty) continue;
+
+      // Parse all time matches in docTimeRaw (e.g. "10:00 AM - 11:30 AM" or "10:00 AM")
+      final matches = RegExp(
+        r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+        caseSensitive: false,
+      ).allMatches(docTimeRaw).toList();
+
+      if (matches.isNotEmpty) {
+        final startMins = _parseToMinutes(matches[0].group(0)!);
+        if (startMins != null) {
+          int endMins;
+          if (matches.length > 1) {
+            endMins = _parseToMinutes(matches[1].group(0)!) ?? (startMins + 30);
+          } else {
+            // Calculate duration if services list is present in doc
+            int docDuration = 30;
+            if (doc['services'] is List && (doc['services'] as List).isNotEmpty) {
+              int totalSvcDuration = 0;
+              for (var s in doc['services']) {
+                if (s is Map && s['duration'] != null) {
+                  totalSvcDuration += parseDurationToMinutes(s['duration'].toString());
+                }
+              }
+              if (totalSvcDuration > 0) docDuration = totalSvcDuration;
+            } else if (doc['duration'] != null) {
+              docDuration = parseDurationToMinutes(doc['duration'].toString());
+            }
+            endMins = startMins + docDuration;
+          }
+
+          for (var slot in availableTimes) {
+            final slotMins = _parseToMinutes(slot);
+            if (slotMins != null) {
+              if (slotMins >= startMins && slotMins < endMins) {
+                lockedTimeSlots.add(slot);
+              }
+            }
+          }
+        }
+      } else {
+        // Fallback for single time string or non-standard format
         final normalizedDocTime = _normalizeTime(docTimeRaw);
         if (normalizedDocTime != null) {
           for (var slot in availableTimes) {
@@ -564,50 +756,67 @@ class SalonDetailController extends GetxController {
     }).toList();
   }
 
-  bool _isSameDate(String docDateRaw, DateTime target) {
-    if (docDateRaw.isEmpty) return false;
-    final docLower = docDateRaw.toLowerCase().trim();
+  bool _isSameDate(dynamic docDateRaw, DateTime target) {
+    if (docDateRaw == null) return false;
 
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final formatted1 =
-        "${days[target.weekday - 1]}, ${months[target.month - 1]} ${target.day}, ${target.year}"
-            .toLowerCase();
+    if (docDateRaw is Timestamp) {
+      final dt = docDateRaw.toDate();
+      return dt.year == target.year &&
+          dt.month == target.month &&
+          dt.day == target.day;
+    }
 
-    if (docLower == formatted1) return true;
+    if (docDateRaw is DateTime) {
+      return docDateRaw.year == target.year &&
+          docDateRaw.month == target.month &&
+          docDateRaw.day == target.day;
+    }
 
-    final formatted2 =
-        "${target.year}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}"
-            .toLowerCase();
-    if (docLower == formatted2) return true;
+    final dateStr = docDateRaw.toString().trim();
+    if (dateStr.isEmpty) return false;
 
-    final parsed = DateTime.tryParse(docDateRaw);
+    // Direct ISO string parse check
+    final parsed = DateTime.tryParse(dateStr);
     if (parsed != null) {
       return parsed.year == target.year &&
           parsed.month == target.month &&
           parsed.day == target.day;
     }
 
-    final monthStr = months[target.month - 1].toLowerCase();
-    final dayStr = target.day.toString();
-    final yearStr = target.year.toString();
-    if (docLower.contains(monthStr) &&
-        docLower.contains(dayStr) &&
-        docLower.contains(yearStr)) {
-      return true;
+    final docLower = dateStr.toLowerCase();
+    const months = [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ];
+
+    final targetMonthName = months[target.month - 1];
+
+    // Extract year
+    final yearMatch = RegExp(r'\b(20\d{2})\b').firstMatch(docLower);
+    final docYear = yearMatch != null ? int.tryParse(yearMatch.group(1)!) : null;
+
+    // Extract day
+    final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(
+      docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''),
+    );
+    final docDay = dayMatch != null ? int.tryParse(dayMatch.group(1)!) : null;
+
+    if (docYear != null && docDay != null) {
+      if (docYear == target.year &&
+          docDay == target.day &&
+          docLower.contains(targetMonthName)) {
+        return true;
+      }
     }
 
     return false;
@@ -633,9 +842,11 @@ class SalonDetailController extends GetxController {
 
   void selectDate(DateTime date) {
     selectedDate.value = date;
+    _reevaluateLockedSlots();
     // Clear selected time if it's no longer available for the selected date
     if (selectedTime.isNotEmpty &&
-        !filteredAvailableTimes.contains(selectedTime.value)) {
+        (lockedTimeSlots.contains(selectedTime.value) ||
+            !filteredAvailableTimes.contains(selectedTime.value))) {
       selectedTime.value = '';
     }
   }
