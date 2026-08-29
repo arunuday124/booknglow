@@ -46,8 +46,8 @@ class RebookDateTimeController extends GetxController {
     // Initial setup for quick pick & selected time
     _initializeDefaultTime();
 
-    // One-shot fetch of salon bookings to determine locked slots
-    fetchSalonBookings(forceRefresh: true);
+    // One-shot fetch of salon bookings to determine locked slots (uses 5-min cache if available)
+    fetchSalonBookings(forceRefresh: false);
   }
 
   void _generateDates() {
@@ -164,12 +164,13 @@ class RebookDateTimeController extends GetxController {
     if (_salonBookingsDocs.isEmpty) return;
 
     for (var doc in _salonBookingsDocs) {
-      final status = (doc['bookingStatus']?.toString() ??
-              doc['status']?.toString() ??
-              doc['booking_status']?.toString() ??
-              '')
-          .toLowerCase()
-          .trim();
+      final status =
+          (doc['bookingStatus']?.toString() ??
+                  doc['status']?.toString() ??
+                  doc['booking_status']?.toString() ??
+                  '')
+              .toLowerCase()
+              .trim();
       final isLocked = doc['isLocked'] == true;
 
       // Lock slot if confirmed/accepted or explicitly isLocked
@@ -182,7 +183,9 @@ class RebookDateTimeController extends GetxController {
         continue;
       }
 
-      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '').toString().trim();
+      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '')
+          .toString()
+          .trim();
       if (docTimeRaw.isEmpty) continue;
 
       // Parse all time matches in docTimeRaw (e.g. "10:00 AM - 11:30 AM" or "10:00 AM")
@@ -222,12 +225,13 @@ class RebookDateTimeController extends GetxController {
       }
     }
 
-    // If currently selected time is locked or no longer available, select next available or clear
+    // If currently selected time is locked, cannot fit duration, or no longer available, select next available or clear
     if (selectedTime.isNotEmpty &&
         (lockedTimeSlots.contains(selectedTime.value) ||
+            !canSlotFitDuration(selectedTime.value) ||
             !filteredAvailableTimes.contains(selectedTime.value))) {
       final available = filteredAvailableTimes
-          .where((t) => !lockedTimeSlots.contains(t))
+          .where((t) => !lockedTimeSlots.contains(t) && canSlotFitDuration(t))
           .toList();
       if (available.isNotEmpty) {
         selectedTime.value = available.first;
@@ -238,6 +242,107 @@ class RebookDateTimeController extends GetxController {
         useSameTimeAsLast.value = false;
       }
     }
+  }
+
+  int parseDurationToMinutes(String durationStr) {
+    if (durationStr.trim().isEmpty) return 30;
+    final lower = durationStr.toLowerCase().trim();
+
+    int totalMins = 0;
+    final hrMatch = RegExp(r'(\d+)\s*(?:hr|hour)').firstMatch(lower);
+    if (hrMatch != null) {
+      final hrs = int.tryParse(hrMatch.group(1) ?? '0') ?? 0;
+      totalMins += hrs * 60;
+    }
+
+    final minMatch = RegExp(r'(\d+)\s*(?:min|minute)').firstMatch(lower);
+    if (minMatch != null) {
+      final mins = int.tryParse(minMatch.group(1) ?? '0') ?? 0;
+      totalMins += mins;
+    }
+
+    if (totalMins == 0) {
+      final digitMatch = RegExp(r'(\d+)').firstMatch(lower);
+      if (digitMatch != null) {
+        totalMins = int.tryParse(digitMatch.group(1) ?? '30') ?? 30;
+      }
+    }
+
+    return totalMins > 0 ? totalMins : 30;
+  }
+
+  int get totalDurationMinutes {
+    int total = 0;
+    for (var service in services) {
+      final dStr = service['duration']?.toString() ?? '';
+      total += parseDurationToMinutes(dStr);
+    }
+    return total > 0 ? total : 30;
+  }
+
+  String get formattedTotalDuration {
+    final mins = totalDurationMinutes;
+    final hrs = mins ~/ 60;
+    final remainingMins = mins % 60;
+
+    if (hrs > 0 && remainingMins > 0) {
+      return '$hrs hr $remainingMins min';
+    } else if (hrs > 0) {
+      return hrs == 1 ? '1 hr' : '$hrs hrs';
+    } else {
+      return '$remainingMins min';
+    }
+  }
+
+  String _minutesToSlotString(int totalMins) {
+    final clampedMins = totalMins % (24 * 60);
+    final hour = clampedMins ~/ 60;
+    final min = clampedMins % 60;
+
+    final period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour % 12;
+    if (displayHour == 0) displayHour = 12;
+
+    final formattedHour = displayHour.toString().padLeft(2, '0');
+    final formattedMin = min.toString().padLeft(2, '0');
+
+    return '$formattedHour:$formattedMin $period';
+  }
+
+  String? getSlotUnavailabilityReason(String startTimeSlot) {
+    final normStart = _normalizeTime(startTimeSlot) ?? startTimeSlot;
+    if (isSlotLocked(normStart) || isSlotLocked(startTimeSlot)) {
+      return 'This time slot ($startTimeSlot) is already booked and locked.';
+    }
+
+    final startMins = _parseToMinutes(startTimeSlot);
+    if (startMins == null) return 'Invalid time slot ($startTimeSlot).';
+
+    final duration = totalDurationMinutes > 0 ? totalDurationMinutes : 30;
+    final endMins = startMins + duration;
+
+    for (int cur = startMins; cur < endMins; cur += 30) {
+      final slotString = _minutesToSlotString(cur);
+
+      if (isSlotLocked(slotString)) {
+        final durText = formattedTotalDuration;
+        return 'Cannot select $startTimeSlot for a $durText service because the consecutive slot ($slotString) is already booked.';
+      }
+
+      final matchesAvailable = availableTimes.any(
+        (avail) => _parseToMinutes(avail) == cur,
+      );
+      if (!matchesAvailable) {
+        final durText = formattedTotalDuration;
+        return 'Cannot select $startTimeSlot for a $durText service because it extends past salon operating hours.';
+      }
+    }
+
+    return null;
+  }
+
+  bool canSlotFitDuration(String timeSlot) {
+    return getSlotUnavailabilityReason(timeSlot) == null;
   }
 
   bool isSlotLocked(String timeSlot) {
@@ -357,12 +462,14 @@ class RebookDateTimeController extends GetxController {
 
     // Extract year
     final yearMatch = RegExp(r'\b(20\d{2})\b').firstMatch(docLower);
-    final docYear = yearMatch != null ? int.tryParse(yearMatch.group(1)!) : null;
+    final docYear = yearMatch != null
+        ? int.tryParse(yearMatch.group(1)!)
+        : null;
 
     // Extract day
-    final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(
-      docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''),
-    );
+    final dayMatch = RegExp(
+      r'\b([1-9]|[12]\d|3[01])\b',
+    ).firstMatch(docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''));
     final docDay = dayMatch != null ? int.tryParse(dayMatch.group(1)!) : null;
 
     if (docYear != null && docDay != null) {
@@ -402,11 +509,11 @@ class RebookDateTimeController extends GetxController {
     if (useSameTimeAsLast.value &&
         normalizedOrig != null &&
         validTimes.contains(normalizedOrig) &&
-        !isSlotLocked(normalizedOrig)) {
+        canSlotFitDuration(normalizedOrig)) {
       selectedTime.value = normalizedOrig;
     } else if (!validTimes.contains(selectedTime.value) ||
-        isSlotLocked(selectedTime.value)) {
-      final available = validTimes.where((t) => !isSlotLocked(t)).toList();
+        !canSlotFitDuration(selectedTime.value)) {
+      final available = validTimes.where((t) => canSlotFitDuration(t)).toList();
       if (available.isNotEmpty) {
         selectedTime.value = available.first;
       } else {
@@ -417,16 +524,17 @@ class RebookDateTimeController extends GetxController {
   }
 
   void selectTime(String timeSlot) {
-    if (isSlotLocked(timeSlot)) {
+    final reason = getSlotUnavailabilityReason(timeSlot);
+    if (reason != null) {
       Get.snackbar(
-        'Slot Locked',
-        'This time slot ($timeSlot) is already booked and locked.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color.fromARGB(255, 219, 62, 5),
+        'Slot Unavailable',
+        reason,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color.fromARGB(255, 255, 0, 0),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       );
       return;
     }
@@ -446,7 +554,7 @@ class RebookDateTimeController extends GetxController {
       Get.snackbar(
         'Time Slot Unavailable',
         'The previous time slot ($originalTime) has already passed for today. Please pick an upcoming time slot.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFF05352F),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
@@ -459,7 +567,7 @@ class RebookDateTimeController extends GetxController {
       Get.snackbar(
         'Slot Booked',
         'Your previous time slot ($originalTime) is already booked for this date. Please choose another available slot.',
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color.fromARGB(255, 219, 62, 5),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
@@ -945,27 +1053,11 @@ class RebookDateTimeScreen extends StatelessWidget {
                       final isSelected =
                           controller.selectedTime.value == timeSlot;
                       final isLocked = controller.isSlotLocked(timeSlot);
+                      final canFit = controller.canSlotFitDuration(timeSlot);
+                      final isBlocked = isLocked || !canFit;
 
                       return GestureDetector(
-                        onTap: isLocked
-                            ? () {
-                                Get.snackbar(
-                                  'Slot Locked',
-                                  'This time slot ($timeSlot) is already booked and locked.',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: const Color.fromARGB(
-                                    255,
-                                    219,
-                                    62,
-                                    5,
-                                  ),
-                                  colorText: Colors.white,
-                                  margin: const EdgeInsets.all(16),
-                                  borderRadius: 12,
-                                  duration: const Duration(seconds: 2),
-                                );
-                              }
-                            : () => controller.selectTime(timeSlot),
+                        onTap: () => controller.selectTime(timeSlot),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
@@ -973,15 +1065,15 @@ class RebookDateTimeScreen extends StatelessWidget {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: isLocked
-                                ? const Color(0xFFEFECE6)
+                            color: isBlocked
+                                ? const Color(0xFFFDECEA)
                                 : isSelected
                                 ? const Color(0xFF05352F)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isLocked
-                                  ? const Color(0xFFD6CFC4)
+                              color: isBlocked
+                                  ? const Color(0xFFF5B7B1)
                                   : isSelected
                                   ? const Color(0xFF05352F)
                                   : const Color(
@@ -989,7 +1081,7 @@ class RebookDateTimeScreen extends StatelessWidget {
                                     ).withValues(alpha: 0.3),
                               width: isSelected ? 1.5 : 1,
                             ),
-                            boxShadow: isLocked
+                            boxShadow: isBlocked
                                 ? []
                                 : [
                                     BoxShadow(
@@ -1006,11 +1098,11 @@ class RebookDateTimeScreen extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (isLocked) ...[
+                              if (isBlocked) ...[
                                 const Icon(
                                   Icons.lock_rounded,
                                   size: 14,
-                                  color: Color(0xFF9E9588),
+                                  color: Color(0xFFE53935),
                                 ),
                                 const SizedBox(width: 6),
                               ],
@@ -1018,9 +1110,11 @@ class RebookDateTimeScreen extends StatelessWidget {
                                 timeSlot,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isLocked
-                                      ? const Color(0xFF9E9588)
+                                  fontWeight: isSelected || isBlocked
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: isBlocked
+                                      ? const Color(0xFFC0392B)
                                       : isSelected
                                       ? Colors.white
                                       : const Color(0xFF05352F),
@@ -1101,7 +1195,7 @@ class RebookDateTimeScreen extends StatelessWidget {
                       Get.snackbar(
                         'Select Time Slot',
                         'Please select an upcoming time slot to continue.',
-                        snackPosition: SnackPosition.BOTTOM,
+                        snackPosition: SnackPosition.TOP,
                         backgroundColor: Colors.red.shade800,
                         colorText: Colors.white,
                         margin: const EdgeInsets.all(16),
@@ -1113,7 +1207,7 @@ class RebookDateTimeScreen extends StatelessWidget {
                       Get.snackbar(
                         'Slot Locked',
                         'The chosen time slot is already booked. Please choose an available slot.',
-                        snackPosition: SnackPosition.BOTTOM,
+                        snackPosition: SnackPosition.TOP,
                         backgroundColor: Colors.red.shade800,
                         colorText: Colors.white,
                         margin: const EdgeInsets.all(16),
@@ -1165,11 +1259,11 @@ class RebookDateTimeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isLocked ? const Color(0xFFEFECE6) : Colors.white,
+        color: isLocked ? const Color(0xFFFDECEA) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isLocked
-              ? const Color(0xFFD6CFC4)
+              ? const Color(0xFFF5B7B1)
               : const Color(0xFFE8D5AF).withValues(alpha: 0.3),
         ),
       ),
@@ -1177,7 +1271,7 @@ class RebookDateTimeScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isLocked)
-            const Icon(Icons.lock_rounded, size: 10, color: Color(0xFF9E9588))
+            const Icon(Icons.lock_rounded, size: 10, color: Color(0xFFE53935))
           else
             Container(
               width: 6,
@@ -1194,7 +1288,7 @@ class RebookDateTimeScreen extends StatelessWidget {
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: isLocked
-                  ? const Color(0xFF9E9588)
+                  ? const Color(0xFFC0392B)
                   : const Color(0xFF05352F),
             ),
           ),

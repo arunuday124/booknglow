@@ -483,8 +483,9 @@ class SalonDetailController extends GetxController {
 
     int totalMins = 0;
 
-    final hrMatch =
-        RegExp(r'(\d+(?:\.\d+)?)\s*(?:hr|hour|h)\b').firstMatch(lower);
+    final hrMatch = RegExp(
+      r'(\d+(?:\.\d+)?)\s*(?:hr|hour|h)\b',
+    ).firstMatch(lower);
     if (hrMatch != null) {
       final hrs = double.tryParse(hrMatch.group(1) ?? '0') ?? 0;
       totalMins += (hrs * 60).round();
@@ -609,6 +610,82 @@ class SalonDetailController extends GetxController {
     } else {
       selectedServices.add(serviceName);
     }
+
+    // If a time slot was already selected, verify it can still accommodate the new total duration
+    if (selectedTime.value.isNotEmpty &&
+        !canSlotFitDuration(selectedTime.value)) {
+      final oldTime = selectedTime.value;
+      selectedTime.value = '';
+      final durText = formattedTotalDuration;
+      Get.snackbar(
+        'Time Slot Adjusted',
+        'Your selected time ($oldTime) was cleared because it cannot fit the updated $durText duration due to booked slots.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color.fromARGB(255, 252, 139, 1),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
+
+  /// Formats minutes from midnight into standardized slot string like "07:30 PM"
+  String _minutesToSlotString(int totalMins) {
+    final clampedMins = totalMins % (24 * 60);
+    final hour = clampedMins ~/ 60;
+    final min = clampedMins % 60;
+
+    final period = hour >= 12 ? 'PM' : 'AM';
+    int displayHour = hour % 12;
+    if (displayHour == 0) displayHour = 12;
+
+    final formattedHour = displayHour.toString().padLeft(2, '0');
+    final formattedMin = min.toString().padLeft(2, '0');
+
+    return '$formattedHour:$formattedMin $period';
+  }
+
+  /// Checks if a starting time slot can accommodate the selected service duration continuously.
+  /// Returns null if valid, or an error explanation string if it cannot fit.
+  String? getSlotUnavailabilityReason(String startTimeSlot) {
+    final normStart = _normalizeTime(startTimeSlot) ?? startTimeSlot;
+    if (isSlotLocked(normStart) || isSlotLocked(startTimeSlot)) {
+      return 'This time slot ($startTimeSlot) is already booked and locked.';
+    }
+
+    final startMins = _parseToMinutes(startTimeSlot);
+    if (startMins == null) return 'Invalid time slot ($startTimeSlot).';
+
+    final duration = totalDurationMinutes > 0 ? totalDurationMinutes : 30;
+    final endMins = startMins + duration;
+
+    // Check each 30-minute block that this service duration will occupy
+    for (int cur = startMins; cur < endMins; cur += 30) {
+      final slotString = _minutesToSlotString(cur);
+
+      // 1. Check if any consecutive slot within the duration is locked
+      if (isSlotLocked(slotString)) {
+        final durText = formattedTotalDuration;
+        return 'Cannot select $startTimeSlot for a $durText service because the consecutive slot ($slotString) is already booked.';
+      }
+
+      // 2. Check if the slot exceeds salon operating hours
+      final matchesAvailable = availableTimes.any(
+        (avail) => _parseToMinutes(avail) == cur,
+      );
+      if (!matchesAvailable) {
+        final durText = formattedTotalDuration;
+        return 'Cannot select $startTimeSlot for a $durText service because it extends past salon operating hours.';
+      }
+    }
+
+    return null; // All slots in the continuous window are free!
+  }
+
+  /// Returns true if the starting slot has all continuous required intervals free and unlocked
+  bool canSlotFitDuration(String timeSlot) {
+    return getSlotUnavailabilityReason(timeSlot) == null;
   }
 
   Future<void> fetchBookedSlots({bool forceRefresh = false}) async {
@@ -643,12 +720,13 @@ class SalonDetailController extends GetxController {
     if (date == null || _salonBookingsDocs.isEmpty) return;
 
     for (var doc in _salonBookingsDocs) {
-      final status = (doc['bookingStatus']?.toString() ??
-              doc['status']?.toString() ??
-              doc['booking_status']?.toString() ??
-              '')
-          .toLowerCase()
-          .trim();
+      final status =
+          (doc['bookingStatus']?.toString() ??
+                  doc['status']?.toString() ??
+                  doc['booking_status']?.toString() ??
+                  '')
+              .toLowerCase()
+              .trim();
       final isLocked = doc['isLocked'] == true;
 
       // Lock slot if bookingStatus is confirmed/accepted or isLocked is true
@@ -661,7 +739,9 @@ class SalonDetailController extends GetxController {
         continue;
       }
 
-      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '').toString().trim();
+      final docTimeRaw = (doc['time'] ?? doc['timeSlot'] ?? '')
+          .toString()
+          .trim();
       if (docTimeRaw.isEmpty) continue;
 
       // Parse all time matches in docTimeRaw (e.g. "10:00 AM - 11:30 AM" or "10:00 AM")
@@ -679,11 +759,14 @@ class SalonDetailController extends GetxController {
           } else {
             // Calculate duration if services list is present in doc
             int docDuration = 30;
-            if (doc['services'] is List && (doc['services'] as List).isNotEmpty) {
+            if (doc['services'] is List &&
+                (doc['services'] as List).isNotEmpty) {
               int totalSvcDuration = 0;
               for (var s in doc['services']) {
                 if (s is Map && s['duration'] != null) {
-                  totalSvcDuration += parseDurationToMinutes(s['duration'].toString());
+                  totalSvcDuration += parseDurationToMinutes(
+                    s['duration'].toString(),
+                  );
                 }
               }
               if (totalSvcDuration > 0) docDuration = totalSvcDuration;
@@ -715,9 +798,9 @@ class SalonDetailController extends GetxController {
       }
     }
 
-    // If currently selected time is now locked or not available, clear selection
+    // If currently selected time is now locked, cannot fit duration, or not available, clear selection
     if (selectedTime.isNotEmpty &&
-        (lockedTimeSlots.contains(selectedTime.value) ||
+        (!canSlotFitDuration(selectedTime.value) ||
             !filteredAvailableTimes.contains(selectedTime.value))) {
       selectedTime.value = '';
     }
@@ -803,12 +886,14 @@ class SalonDetailController extends GetxController {
 
     // Extract year
     final yearMatch = RegExp(r'\b(20\d{2})\b').firstMatch(docLower);
-    final docYear = yearMatch != null ? int.tryParse(yearMatch.group(1)!) : null;
+    final docYear = yearMatch != null
+        ? int.tryParse(yearMatch.group(1)!)
+        : null;
 
     // Extract day
-    final dayMatch = RegExp(r'\b([1-9]|[12]\d|3[01])\b').firstMatch(
-      docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''),
-    );
+    final dayMatch = RegExp(
+      r'\b([1-9]|[12]\d|3[01])\b',
+    ).firstMatch(docLower.replaceAll(RegExp(r'\b20\d{2}\b'), ''));
     final docDay = dayMatch != null ? int.tryParse(dayMatch.group(1)!) : null;
 
     if (docYear != null && docDay != null) {
@@ -843,16 +928,29 @@ class SalonDetailController extends GetxController {
   void selectDate(DateTime date) {
     selectedDate.value = date;
     _reevaluateLockedSlots();
-    // Clear selected time if it's no longer available for the selected date
+    // Clear selected time if it's no longer available for the selected date or cannot fit duration
     if (selectedTime.isNotEmpty &&
-        (lockedTimeSlots.contains(selectedTime.value) ||
+        (!canSlotFitDuration(selectedTime.value) ||
             !filteredAvailableTimes.contains(selectedTime.value))) {
       selectedTime.value = '';
     }
   }
 
   void selectTime(String timeSlot) {
-    if (isSlotLocked(timeSlot)) return;
+    final reason = getSlotUnavailabilityReason(timeSlot);
+    if (reason != null) {
+      Get.snackbar(
+        'Slot Unavailable',
+        reason,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color.fromARGB(255, 219, 62, 5),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
     if (!filteredAvailableTimes.contains(timeSlot)) return;
     selectedTime.value = timeSlot;
   }
@@ -861,7 +959,7 @@ class SalonDetailController extends GetxController {
     return selectedDate.value != null &&
         selectedTime.value.isNotEmpty &&
         filteredAvailableTimes.contains(selectedTime.value) &&
-        !isSlotLocked(selectedTime.value) &&
+        canSlotFitDuration(selectedTime.value) &&
         selectedServices.isNotEmpty;
   }
 

@@ -733,15 +733,18 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                 final isLocked = controller.isSlotLocked(
                                   timeSlot,
                                 );
+                                final canFit =
+                                    controller.canSlotFitDuration(timeSlot);
+                                final isBlocked = isLocked || !canFit;
 
                                 Color bgColor;
                                 Color borderColor;
                                 Color textColor;
 
-                                if (isLocked) {
-                                  bgColor = const Color(0xFFEFECE6);
-                                  borderColor = const Color(0xFFD6CFC4);
-                                  textColor = const Color(0xFF9E9588);
+                                if (isBlocked) {
+                                  bgColor = const Color(0xFFFDECEA);
+                                  borderColor = const Color(0xFFF5B7B1);
+                                  textColor = const Color(0xFFC0392B);
                                 } else if (isStart) {
                                   bgColor = const Color(0xFF05352F);
                                   borderColor = const Color(0xFF05352F);
@@ -759,28 +762,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                 }
 
                                 return GestureDetector(
-                                  onTap: isLocked
-                                      ? () {
-                                          Get.snackbar(
-                                            'Slot Locked',
-                                            'This time slot ($timeSlot) is already booked and locked.',
-                                            snackPosition: SnackPosition.BOTTOM,
-                                            backgroundColor:
-                                                const Color.fromARGB(
-                                                  255,
-                                                  219,
-                                                  62,
-                                                  5,
-                                                ),
-                                            colorText: Colors.white,
-                                            margin: const EdgeInsets.all(16),
-                                            borderRadius: 12,
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          );
-                                        }
-                                      : () => controller.selectTime(timeSlot),
+                                  onTap: () => controller.selectTime(timeSlot),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 250),
                                     curve: Curves.easeInOut,
@@ -795,7 +777,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                         color: borderColor,
                                         width: (isStart || isInWindow) ? 1.5 : 1,
                                       ),
-                                      boxShadow: isLocked
+                                      boxShadow: isBlocked
                                           ? []
                                           : (isStart || isInWindow)
                                           ? [
@@ -824,11 +806,11 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        if (isLocked) ...[
+                                        if (isBlocked) ...[
                                           const Icon(
                                             Icons.lock_rounded,
                                             size: 13,
-                                            color: Color(0xFF9E9588),
+                                            color: Color(0xFFE53935),
                                           ),
                                           const SizedBox(width: 5),
                                         ] else if (isInWindow && !isStart) ...[
@@ -845,7 +827,7 @@ class SalonDetailBottomSheet extends StatelessWidget {
                                             textStyle: TextStyle(
                                               fontSize: 13,
                                               fontWeight:
-                                                  (isStart || isInWindow)
+                                                  (isStart || isInWindow || isBlocked)
                                                       ? FontWeight.w800
                                                       : FontWeight.w600,
                                               color: textColor,
